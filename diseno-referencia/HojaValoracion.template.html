@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-977db70a-ffd7-48f4-ba08-dc9f7c58be44/styles.css">
+<script src="_ds/modernist-977db70a-ffd7-48f4-ba08-dc9f7c58be44/_ds_bundle.js"></script>
+</helmet>
+
+<div style="font-family:'Barlow',system-ui,sans-serif; color:#F2F2F2">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:1px solid #262626; padding-bottom:13px">
+    <div>
+      <div style="font-family:'Barlow Condensed','Barlow',sans-serif; font-weight:700; font-size:20px; letter-spacing:0.02em; line-height:1.2">HOJA DE VALORACIÓN · {{ placa }}</div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; color:{{ estadoFg }}; margin-top:6px">{{ estado }}</div>
+    </div>
+    <sc-if value="{{ mostrarVolver }}" hint-placeholder-val="{{ true }}">
+      <button sc-camel-on-click="{{ onVolver }}" style="background:transparent; border:1px solid #595959; border-radius:6px; color:#BFBFBF; padding:8px 13px; font-family:'Barlow Condensed',sans-serif; font-size:12.5px; font-weight:600; letter-spacing:0.07em; cursor:pointer">← VOLVER ATRÁS</button>
+    </sc-if>
+  </div>
+
+  <div style="display:grid; grid-template-columns:minmax(300px,1.15fr) minmax(280px,0.85fr); gap:14px; margin-top:16px; align-items:start">
+    <div style="background:#262626; border:1px solid #595959; border-radius:10px">
+      <div style="padding:12px 16px; border-bottom:1px solid #595959; display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap">
+        <span style="font-family:'Barlow Condensed','Barlow',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.07em; text-transform:uppercase; line-height:1.25">Previsualización · hoja.pdf</span>
+        <div style="display:flex; align-items:center; gap:10px">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.08em; color:#BFBFBF; white-space:nowrap">{{ meta }}</span>
+          <button sc-camel-on-click="{{ onVisor }}" style="background:transparent; border:1px solid #595959; border-radius:6px; color:#BFBFBF; padding:5px 9px; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; display:flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>
+            <span>PANTALLA COMPLETA</span>
+          </button>
+        </div>
+      </div>
+      <div sc-camel-on-click="{{ onVisor }}" style="padding:16px; cursor:zoom-in">
+        <div style="background:#F2F2F2; color:#0D0D0D; border-radius:4px; aspect-ratio:8.5/11; display:flex; flex-direction:column; padding:26px 24px; gap:10px">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px">
+            <div>
+              <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:0.02em">SERVIMACROMOTOR</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:8px; letter-spacing:0.12em; color:#595959; margin-top:2px">HOJA DE VALORACIÓN DE DAÑOS</div>
+            </div>
+            <div style="text-align:right; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#595959; line-height:1.7">{{ ot }}<br>{{ fecha }}</div>
+          </div>
+          <div style="height:2px; background:#0D0D0D"></div>
+          <div style="display:flex; gap:22px; flex-wrap:wrap">
+            <sc-for list="{{ cabecera }}" as="h" hint-placeholder-count="3">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:7.5px; letter-spacing:0.12em; color:#BFBFBF">{{ h.k }}</div>
+                <div style="font-size:11px; font-weight:600; margin-top:2px">{{ h.v }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:9.5px; color:#595959; line-height:1.5; border-top:1px solid #BFBFBF; padding-top:8px">{{ descripcion }}</div>
+          <div style="display:flex; flex-direction:column; gap:4px">
+            <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:7.5px; letter-spacing:0.1em; color:#595959; border-bottom:1px solid #0D0D0D; padding-bottom:3px">
+              <span>PIEZA</span><span>ACCIÓN · GRAVEDAD</span>
+            </div>
+            <sc-for list="{{ filas }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex; justify-content:space-between; gap:10px; font-size:9.5px; border-bottom:1px solid #d9d9d9; padding-bottom:3px">
+                <span style="font-weight:600">{{ p.pieza }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace; color:#595959">{{ p.detalle }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto; display:flex; justify-content:space-between; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:7.5px; letter-spacing:0.08em; color:#595959; border-top:1px solid #BFBFBF; padding-top:8px">
+            <span>{{ pie }}</span><span>PÁGINA 1 DE 1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:14px">
+      <div style="background:#262626; border:1px solid #595959; border-radius:10px; padding:16px">
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.07em; text-transform:uppercase">Descargas</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px">
+          <button style="width:100%; text-align:left; background:transparent; border:1px solid #595959; border-radius:6px; color:#F2F2F2; padding:11px 14px; font-family:'Barlow Condensed',sans-serif; font-size:13.5px; font-weight:600; letter-spacing:0.07em; display:flex; align-items:center; gap:10px; cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
+            <span>DESCARGAR HOJA (.PDF)</span>
+          </button>
+          <button style="width:100%; text-align:left; background:transparent; border:1px solid #595959; border-radius:6px; color:#F2F2F2; padding:11px 14px; font-family:'Barlow Condensed',sans-serif; font-size:13.5px; font-weight:600; letter-spacing:0.07em; display:flex; align-items:center; gap:10px; cursor:pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg>
+            <span>DESCARGAR FOTOS (.ZIP) · {{ numFotos }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="background:#262626; border:1px solid #595959; border-radius:10px; padding:16px">
+        <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.07em; text-transform:uppercase">CESVI Colombia</div>
+        <div style="font-size:12.5px; color:#BFBFBF; line-height:1.5; margin-top:8px">{{ cesviTexto }}</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-top:13px">
+          <sc-if value="{{ pendienteCesvi }}" hint-placeholder-val="{{ true }}">
+            <button sc-camel-on-click="{{ onMarcarCesvi }}" style="width:100%; text-align:left; background:#FF6B1A; color:#0D0D0D; border:none; border-radius:6px; padding:12px 15px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.08em; cursor:pointer">MARCAR CARGADA A CESVI</button>
+          </sc-if>
+          <button sc-camel-on-click="{{ onEditar }}" style="width:100%; text-align:left; background:transparent; border:1px solid #595959; border-radius:6px; color:#F2F2F2; padding:11px 14px; font-family:'Barlow Condensed',sans-serif; font-size:13.5px; font-weight:600; letter-spacing:0.07em; cursor:pointer">ACTUALIZAR HOJA</button>
+        </div>
+      </div>
+
+      <div style="background:#262626; border:1px solid #595959; border-radius:10px; padding:16px">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; color:#595959">HISTORIAL</div>
+        <sc-for list="{{ historial }}" as="h" hint-placeholder-count="3">
+          <div style="display:flex; gap:12px; margin-top:11px">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#595959; width:52px; flex:0 0 52px">{{ h.fecha }}</div>
+            <div style="font-size:12.5px; color:#BFBFBF; line-height:1.4">{{ h.texto }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:760},&quot;placa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;ABC123&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;estado&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;PENDIENTE DE CARGA A CESVI&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;estadoFg&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#FF6B1A&quot;,&quot;#3FB950&quot;,&quot;#E5484D&quot;],&quot;default&quot;:&quot;#FF6B1A&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;ot&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;OT-2481&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;fecha&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;26 AGO 2026&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;meta&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;4 PIEZAS · 1 PÁGINA&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;numFotos&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;tsType&quot;:&quot;number&quot;},&quot;descripcion&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;cesviTexto&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;pie&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;VALORÓ: LAURA BELTRÁN NIÑO · ASESOR&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;pendienteCesvi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;mostrarVolver&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;cabecera&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{k:string,v:string}&gt;&quot;},&quot;filas&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{pieza:string,detalle:string}&gt;&quot;},&quot;historial&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{fecha:string,texto:string}&gt;&quot;},&quot;onVisor&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onMarcarCesvi&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onEditar&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onVolver&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}"></script>
+</body>
+</html>

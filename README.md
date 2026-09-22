@@ -1,70 +1,52 @@
-# Getting Started with Create React App
+# Servimacromotor GRC — Front-end
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Front-end del MVP **GRC · Gestión de Reparación de Colisión** (taller Servimacromotor), construido con
+Create React App a partir del diseño `Servimacromotor GRC (standalone).html` y de los documentos
+`Analisis_Requisitos_Completo.pdf` y `Product_Backlog_GRC.pdf` (carpeta `Documents\Integrador`).
 
-## Available Scripts
+## Ejecutar
 
-In the project directory, you can run:
+```bash
+npm install
+npm start
+```
 
-### `npm start`
+Abre http://localhost:3000. Usuarios de demostración (API simulada):
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| Rol | Correo | Contraseña |
+|---|---|---|
+| ADMIN | avillalba@servimacromotor.co | admin123 |
+| ASESOR | lbeltran@servimacromotor.co | asesor123 |
+| GERENTE | rpena@servimacromotor.co | gerente123 |
+| ASESOR (inactivo) | jlara@servimacromotor.co | asesor123 |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Los datos simulados se guardan en `localStorage` (`grc_mock_db_v1`); bórralo para restaurar los datos iniciales.
 
-### `npm test`
+## Backend
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Por defecto la app usa una API simulada en el navegador (`src/services/mock`). Para conectar el backend,
+copia `.env.example` a `.env` y define `REACT_APP_USE_MOCK=false` y `REACT_APP_API_URL`.
+Los endpoints REST esperados están en cada `src/services/*Service.js`.
 
-### `npm run build`
+## Estructura
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+src/
+  components/   Componentes reutilizables (ui, layout, modal de etapa, valoración, pestañas de la ficha)
+  pages/        Una página por ruta (Login, Alertas, Avisos, Backlog, Ficha, Nueva orden, Valoración, Técnicos, Usuarios)
+  styles/       CSS global (tokens del diseño) y un CSS por página/componente
+  services/     Comunicación con la API (axios) + API simulada
+  context/      AuthContext (sesión y rol)
+  utils/        Constantes de negocio, permisos por rol y formato
+diseno-referencia/  Template extraído del diseño de Claude Design (solo referencia)
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Módulos y acceso por rol
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+| Módulo | ADMIN | GERENTE | ASESOR |
+|---|---|---|---|
+| Alertas, Backlog, Ficha, Nueva orden, Valoración | Sí | Sí | Sí |
+| Técnicos | CRUD | CRUD | Solo lectura |
+| Usuarios | CRUD | CRUD | No |
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+El rol TECNICO no tiene acceso web en el MVP. El módulo Clientes queda fuera de alcance (marcado "PRÓXIMO").

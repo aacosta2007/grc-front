@@ -1,0 +1,250 @@
+/* Estilos base del diseño "Servimacromotor GRC" (tema oscuro industrial).
+   Tokens de color en :root; clases utilitarias con prefijo grc-. */
+
+:root {
+  --bg: #0D0D0D;
+  --card: #262626;
+  --line: #595959;
+  --line-soft: #333333;
+  --text: #F2F2F2;
+  --sub: #BFBFBF;
+  --accent: #FF6B1A;
+  --red: #E5484D;
+  --green: #3FB950;
+  --accent-bg-soft: #2b2119;
+  --locked-bg: #141414;
+
+  --font-body: 'Barlow', system-ui, sans-serif;
+  --font-condensed: 'Barlow Condensed', 'Barlow', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { min-height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--text); }
+
+input, select, textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+input[type='checkbox'], input[type='radio'] { width: auto; accent-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--line); }
+input:hover, select:hover, textarea:hover { border-color: var(--sub); }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+input:disabled, select:disabled, textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button {
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: var(--font-condensed);
+  line-height: 1.15;
+}
+button:disabled { opacity: 0.42; cursor: not-allowed; }
+
+h1 { text-wrap: pretty; }
+
+label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: var(--sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--sub);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  text-transform: uppercase;
+}
+td { padding: 12px 14px; border-bottom: 1px solid var(--card); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+
+/* ───────── Utilidades ───────── */
+
+.grc-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.grc-card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.grc-panel-title {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grc-section-title {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grc-mono {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.grc-placa {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.grc-muted { color: var(--line); }
+.grc-sub { color: var(--sub); }
+
+/* Botones */
+.grc-btn {
+  border: 1px solid transparent;
+  padding: 9px 16px;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.grc-btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.grc-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.grc-btn-outline { background: transparent; border-color: var(--line); color: var(--sub); font-weight: 600; font-size: 12.5px; }
+.grc-btn-outline:hover:not(:disabled) { border-color: var(--sub); color: var(--text); }
+.grc-btn-ghost { background: transparent; border: none; color: var(--accent); padding: 6px 8px; }
+.grc-btn-danger { background: transparent; border-color: var(--red); color: var(--red); font-weight: 600; font-size: 12.5px; }
+.grc-btn-sm { padding: 5px 10px; font-size: 11.5px; }
+.grc-btn-block { width: 100%; }
+
+/* Etiquetas de estado */
+.grc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid currentColor;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.grc-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+
+/* Mensajes */
+.grc-alert {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.grc-alert-error { border-color: var(--red); color: #ffb3b5; background: rgba(229, 72, 77, 0.08); }
+.grc-alert-success { border-color: var(--green); color: #b7f0c0; background: rgba(63, 185, 80, 0.08); }
+.grc-alert-info { border-color: var(--accent); color: var(--text); background: var(--accent-bg-soft); }
+
+.grc-empty {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--line);
+  padding: 14px 4px;
+  text-transform: uppercase;
+}
+
+/* Modal */
+.grc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.grc-modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.grc-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: grc-spin 0.8s linear infinite;
+}
+@keyframes grc-spin { to { transform: rotate(360deg); } }
+
+.grc-visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 720px) {
+  .grc-hide-mobile { display: none !important; }
+}

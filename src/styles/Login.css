@@ -1,0 +1,45 @@
+.login-screen {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.login-box { width: 100%; max-width: 400px; }
+
+.login-brand { display: flex; align-items: center; gap: 10px; }
+.login-mark { width: 18px; height: 18px; background: var(--accent); border-radius: 3px; flex: none; }
+.login-brand-name { font-family: var(--font-condensed); font-weight: 700; font-size: 21px; letter-spacing: 0.02em; }
+.login-brand-sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; color: var(--line); margin-top: 6px; }
+
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 26px 24px;
+  margin-top: 22px;
+}
+.login-title { font-family: var(--font-condensed); font-weight: 700; font-size: 24px; letter-spacing: 0.01em; }
+.login-desc { font-size: 13px; color: var(--sub); margin-top: 4px; line-height: 1.5; }
+
+.login-submit { text-align: left; margin-top: 20px; padding: 13px 16px; font-size: 15px; }
+
+.login-demo {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--line);
+  margin-top: 16px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.login-footer {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--line);
+  margin-top: 14px;
+}

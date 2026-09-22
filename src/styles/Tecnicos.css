@@ -1,0 +1,89 @@
+.tecnicos-grid {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+.tecnicos-grid--split {
+  grid-template-columns: minmax(0, 1.7fr) minmax(256px, 0.85fr);
+}
+
+.tecnicos-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 860px) {
+  .tecnicos-grid--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.tecnicos-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tecnicos-toggle-inactivos {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--sub);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tecnicos-toggle-inactivos input {
+  width: auto;
+}
+
+.tecnicos-table-wrap {
+  overflow-x: auto;
+}
+
+.tecnicos-nombre {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.tecnicos-doc {
+  color: var(--line);
+  margin-top: 3px;
+}
+
+.tecnicos-fila-inactiva {
+  opacity: 0.5;
+}
+
+.tecnicos-acciones {
+  display: flex;
+  gap: 6px;
+}
+
+.tecnicos-icon-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  padding: 5px;
+  display: flex;
+}
+.tecnicos-icon-btn:hover {
+  border-color: var(--sub);
+  color: var(--text);
+}
+
+.tecnicos-form-card {
+  padding: 16px;
+}
+
+.tecnicos-form-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.tecnicos-form-acciones .grc-btn-block {
+  flex: 1;
+}

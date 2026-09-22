@@ -1,0 +1,196 @@
+/* Tablero Kanban del Backlog. Prefijo: backlog- */
+
+.backlog-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.backlog-draghint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.backlog-draghelp {
+  font-size: 13px;
+  color: var(--line);
+}
+
+.backlog-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+  align-items: flex-start;
+}
+
+.backlog-col {
+  width: 220px;
+  flex: 0 0 220px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 170px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.backlog-col--valida {
+  background: var(--accent-bg-soft);
+  border-color: var(--accent);
+}
+.backlog-col--bloqueada {
+  background: var(--locked-bg);
+  border-color: #333333;
+}
+
+.backlog-col-header {
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.backlog-col-title {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+.backlog-col-nota {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  color: var(--line);
+  margin-top: 4px;
+}
+.backlog-col-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.backlog-col-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.backlog-col-empty {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--line);
+  padding: 3px 2px;
+  text-transform: uppercase;
+}
+
+.backlog-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 7px;
+  padding: 10px 11px;
+  display: flex;
+  flex-direction: column;
+  cursor: grab;
+}
+.backlog-card[draggable='false'] {
+  cursor: default;
+}
+
+.backlog-card-open {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.backlog-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.backlog-card-placa {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.backlog-card-ot {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--line);
+}
+.backlog-card-vehiculo {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 5px;
+  line-height: 1.35;
+}
+.backlog-card-cliente {
+  font-size: 12px;
+  color: var(--line);
+  margin-top: 1px;
+}
+.backlog-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--card);
+}
+.backlog-card-dias {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.backlog-card-tecnico {
+  font-size: 11px;
+  color: var(--line);
+}
+
+.backlog-card-mover {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.backlog-mover-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 4px 9px;
+  border-radius: 5px;
+}
+.backlog-mover-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.backlog-mover-select {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 8px;
+}

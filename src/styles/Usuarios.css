@@ -1,0 +1,60 @@
+.usuarios-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(256px, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .usuarios-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.usuarios-table-wrap {
+  overflow-x: auto;
+}
+
+.usuarios-acciones {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.usuarios-icon-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  padding: 5px;
+  display: flex;
+}
+.usuarios-icon-btn:hover {
+  border-color: var(--sub);
+  color: var(--text);
+}
+
+.usuarios-form-card {
+  padding: 16px;
+}
+
+.usuarios-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.usuarios-nuevo-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  font-family: var(--font-condensed);
+}
+.usuarios-nuevo-btn:hover {
+  border-color: var(--sub);
+  color: var(--text);
+}
