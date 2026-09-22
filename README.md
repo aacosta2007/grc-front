@@ -1,4 +1,4 @@
-# Servimacromotor GRC — Front-end
+# GRC — Front-end
 
 Front-end del MVP **GRC · Gestión de Reparación de Colisión** (taller Servimacromotor), construido con
 Create React App a partir del diseño `Servimacromotor GRC (standalone).html` y de los documentos
