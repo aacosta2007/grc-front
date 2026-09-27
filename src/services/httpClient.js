@@ -2,10 +2,10 @@ import axios from 'axios';
 import { getToken, setSession } from './session';
 
 // Con REACT_APP_USE_MOCK=false las peticiones van al backend real (REACT_APP_API_URL).
-export const USE_MOCK = process.env.REACT_APP_USE_MOCK !== 'false';
+export const USE_MOCK = import.meta.env.REACT_APP_USE_MOCK !== 'false';
 
 const http = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080/api',
+  baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:8080/api',
   headers: { 'Content-Type': 'application/json' },
 });
 

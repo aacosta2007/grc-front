@@ -1,17 +1,17 @@
 # GRC — Front-end
 
 Front-end del MVP **GRC · Gestión de Reparación de Colisión** (taller Servimacromotor), construido con
-Create React App a partir del diseño `Servimacromotor GRC (standalone).html` y de los documentos
+Vite + React a partir del diseño `Servimacromotor GRC (standalone).html` y de los documentos
 `Analisis_Requisitos_Completo.pdf` y `Product_Backlog_GRC.pdf` (carpeta `Documents\Integrador`).
 
 ## Ejecutar
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
-Abre http://localhost:3000. Usuarios de demostración (API simulada):
+(`npm start` también funciona.) Abre http://localhost:3000. Usuarios de demostración (API simulada):
 
 | Rol | Correo | Contraseña |
 |---|---|---|
@@ -26,6 +26,7 @@ Los datos simulados se guardan en `localStorage` (`grc_mock_db_v1`); bórralo pa
 
 Por defecto la app usa una API simulada en el navegador (`src/services/mock`). Para conectar el backend,
 copia `.env.example` a `.env` y define `REACT_APP_USE_MOCK=false` y `REACT_APP_API_URL`.
+Vite expone estas variables REACT_APP_* vía `import.meta.env` (ver `envPrefix` en `vite.config.js`).
 Los endpoints REST esperados están en cada `src/services/*Service.js`.
 
 ## Estructura
