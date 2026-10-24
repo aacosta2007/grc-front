@@ -22,7 +22,8 @@ http.interceptors.response.use(
       setSession(null);
       if (!window.location.pathname.startsWith('/login')) window.location.assign('/login');
     }
-    const msg = (error.response && error.response.data && error.response.data.message) || error.message;
+    const data = error.response && error.response.data;
+    const msg = (data && (data.message || data.error)) || error.message;
     return Promise.reject(Object.assign(new Error(msg), { status: error.response && error.response.status }));
   }
 );
