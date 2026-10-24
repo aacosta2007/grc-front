@@ -248,13 +248,19 @@ export default function TecnicosPage() {
                 required
               />
             </Field>
-            <Field label="DOCUMENTO" htmlFor="tec-doc" style={{ marginTop: 13 }}>
+            <Field
+              label="DOCUMENTO"
+              htmlFor="tec-doc"
+              style={{ marginTop: 13 }}
+              hint={editando ? 'El documento no se puede editar.' : ''}
+            >
               <input
                 id="tec-doc"
                 value={form.documento}
                 onChange={(e) => setForm((f) => ({ ...f, documento: normalizarCedula(e.target.value) }))}
                 placeholder="1014778112"
                 inputMode="numeric"
+                disabled={!!editando}
                 required
               />
             </Field>
