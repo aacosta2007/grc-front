@@ -11,6 +11,32 @@
   }
 }
 
+.usuarios-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.usuarios-toggle-inactivos {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--sub);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.usuarios-toggle-inactivos input {
+  width: auto;
+}
+
+.usuarios-fila-inactiva {
+  opacity: 0.5;
+}
+
 .usuarios-table-wrap {
   overflow-x: auto;
 }

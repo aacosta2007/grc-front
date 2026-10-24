@@ -1,19 +1,64 @@
-import http, { USE_MOCK } from './httpClient';
-import * as mock from './mock/mockApi';
+import http from './httpClient';
 
-// [{ id, nombre, correo, rol, activo }]
-export const getUsuarios = () => (USE_MOCK ? mock.getUsuarios() : http.get('/usuarios'));
+// ─────────────────────────────────────────────────────────────────────────
+// Usuarios está conectado al backend real (Spring Boot ·
+// GestionReparabilidadColision, http://localhost:8080/api).
+//
+// El backend expone Usuario así:
+//   { idUsuario, nombre, email, rol, activo }
+// Endpoints:
+//   GET    /usuario                → activos
+//   GET    /usuario/desactivados   → inactivos
+//   GET    /usuario/{id}
+//   POST   /usuario
+//   PUT    /usuario/{id}           → nombre/email/rol (+ password opcional)
+//   DELETE /usuario/{id}           → desactivar (borrado lógico)
+//   PATCH  /usuario/{id}/reactivar → reactivar
+//
+// Este archivo adapta esa forma a la que usa el resto del front:
+//   { id, nombre, correo, rol, activo }
+// ─────────────────────────────────────────────────────────────────────────
 
-// { nombre, correo, rol (ADMIN|ASESOR|GERENTE), password }
-export const crearUsuario = (data) => (USE_MOCK ? mock.crearUsuario(data) : http.post('/usuarios', data));
+const desdeBackend = (u) => ({
+  id: u.idUsuario,
+  nombre: u.nombre,
+  correo: u.email,
+  rol: u.rol,
+  activo: u.activo,
+});
 
-// password opcional: vacío = no cambiar
-export const actualizarUsuario = (id, data) =>
-  USE_MOCK ? mock.actualizarUsuario(id, data) : http.put(`/usuarios/${id}`, data);
+export async function getUsuarios({ incluirInactivos = false } = {}) {
+  const activos = (await http.get('/usuario')).map(desdeBackend);
+  if (!incluirInactivos) return activos;
+  const inactivos = (await http.get('/usuario/desactivados')).map(desdeBackend);
+  return [...activos, ...inactivos];
+}
 
-// "Eliminar" = desactivar
-export const desactivarUsuario = (id) =>
-  USE_MOCK ? mock.setUsuarioActivo(id, false) : http.patch(`/usuarios/${id}/desactivar`);
+// { nombre, correo, rol, password }
+export async function crearUsuario(data) {
+  const creado = await http.post('/usuario', {
+    nombre: data.nombre,
+    email: data.correo,
+    rol: data.rol,
+    password: data.password,
+  });
+  return desdeBackend(creado);
+}
+
+// password opcional: si no viene, el backend conserva la actual.
+export async function actualizarUsuario(id, data) {
+  const body = {
+    nombre: data.nombre,
+    email: data.correo,
+    rol: data.rol,
+  };
+  if (data.password) body.password = data.password;
+  const actualizado = await http.put(`/usuario/${id}`, body);
+  return desdeBackend(actualizado);
+}
+
+// "Eliminar" = desactivar (borrado lógico en el backend).
+export const desactivarUsuario = (id) => http.delete(`/usuario/${id}`);
 
 export const reactivarUsuario = (id) =>
-  USE_MOCK ? mock.setUsuarioActivo(id, true) : http.patch(`/usuarios/${id}/reactivar`);
+  http.patch(`/usuario/${id}/reactivar`).then(desdeBackend);
