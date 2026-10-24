@@ -7,12 +7,16 @@ import '../styles/Usuarios.css';
 
 const FORM_VACIO = { nombre: '', correo: '', rol: ROLES_ASIGNABLES[0], password: '', passwordConfirm: '' };
 
+// Regla del backend (UsuarioRequestDto): mínimo 8, una mayúscula, una minúscula y un número.
+const passwordValida = (value) => /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(value || '');
+
 export default function UsuariosPage() {
   const { usuario: usuarioActual } = useAuth();
 
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
   const [editando, setEditando] = useState(null); // usuario | null
   const [form, setForm] = useState(FORM_VACIO);
@@ -27,7 +31,7 @@ export default function UsuariosPage() {
     setCargando(true);
     setError(null);
     try {
-      const data = await usuarioService.getUsuarios();
+      const data = await usuarioService.getUsuarios({ incluirInactivos: mostrarInactivos });
       setUsuarios(data);
     } catch (err) {
       setError(err.message);
@@ -38,7 +42,8 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     cargar();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mostrarInactivos]);
 
   const nuevoUsuario = () => {
     setEditando(null);
@@ -67,8 +72,8 @@ export default function UsuariosPage() {
     }
     const cambiaPassword = !editando || form.password;
     if (cambiaPassword) {
-      if (form.password.length < 6) {
-        setFormError('La contraseña debe tener al menos 6 caracteres.');
+      if (!passwordValida(form.password)) {
+        setFormError('La contraseña debe tener al menos 8 caracteres, con mayúscula, minúscula y número.');
         return;
       }
       if (form.password !== form.passwordConfirm) {
@@ -127,7 +132,22 @@ export default function UsuariosPage() {
   return (
     <div className="usuarios-grid">
       <Card className="usuarios-lista">
-        <CardHeader title="Usuarios del sistema" actions={<Mono color="var(--sub)">{usuarios.length} CUENTAS</Mono>} />
+        <CardHeader
+          title="Usuarios del sistema"
+          actions={
+            <div className="usuarios-header-actions">
+              <label className="usuarios-toggle-inactivos">
+                <input
+                  type="checkbox"
+                  checked={mostrarInactivos}
+                  onChange={(e) => setMostrarInactivos(e.target.checked)}
+                />
+                MOSTRAR INACTIVOS
+              </label>
+              <Mono color="var(--sub)">{usuarios.length} CUENTAS</Mono>
+            </div>
+          }
+        />
 
         {error && (
           <div style={{ padding: '12px 16px' }}>
@@ -157,7 +177,7 @@ export default function UsuariosPage() {
                 {usuarios.map((u) => {
                   const esUno = usuarioActual && u.id === usuarioActual.id;
                   return (
-                    <tr key={u.id}>
+                    <tr key={u.id} className={!u.activo ? 'usuarios-fila-inactiva' : ''}>
                       <td style={{ fontWeight: 600, fontSize: 13.5 }}>{u.nombre}</td>
                       <td style={{ color: 'var(--sub)', fontSize: 12.5 }}>{u.correo}</td>
                       <td>
@@ -262,7 +282,7 @@ export default function UsuariosPage() {
             hint={
               editando
                 ? 'Déjala vacía para no cambiarla. La contraseña se guarda cifrada: no se puede consultar, solo reasignar.'
-                : 'Mínimo 6 caracteres.'
+                : 'Mínimo 8 caracteres, con mayúscula, minúscula y número.'
             }
           >
             <input
