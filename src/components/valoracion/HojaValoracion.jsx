@@ -82,7 +82,7 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
         detalles: piezas.map((p) => ({ pieza: p.pieza, accion: p.accion, gravedad: p.accion === ACCION_PIEZA.REPARAR ? p.gravedad : null })),
         imagenes: fotos.map((f) => ({ url: f.url, nombre: f.nombre })),
       };
-      const v = await valoracionService.guardarValoracion(orden.id, payload);
+      const v = await valoracionService.guardarValoracion(orden.id, payload, !valoracion);
       onSaved(v);
     } catch (e) {
       setError(e.message || 'No se pudo guardar la hoja de valoración.');
