@@ -68,14 +68,76 @@ export const marcarDiasEstimados = (idOrden, dias) =>
 
 // ── Nueva orden ──
 
-// { vehiculo:{id,placa,marca,modelo,anio,color,vin,idCliente}, cliente:{...} } | null
-export const buscarVehiculoPorPlaca = (placa) =>
-  USE_MOCK ? mock.buscarVehiculoPorPlaca(placa) : http.get(`/vehiculos/${placa}`);
+// GET /vehiculo/placa/{placa} →
+//   { vehiculo:{id,placa,marca,modelo,anio,color,vin}, cliente:{id,nombre,documento,celular,correo}|null } | null
+export const buscarVehiculoPorPlaca = async (placa) => {
+  try {
+    const v = await http.get(`/vehiculo/placa/${placa}`);
+    return {
+      vehiculo: {
+        id: v.idVehiculo,
+        placa: v.placa,
+        marca: v.marca,
+        modelo: v.modelo,
+        anio: v.anio,
+        color: v.color,
+        vin: v.vin,
+      },
+      cliente: v.cliente
+        ? {
+            id: v.cliente.idPersona,
+            nombre: v.cliente.nombreCompleto,
+            documento: v.cliente.documento,
+            celular: v.cliente.celular,
+            correo: v.cliente.correo,
+          }
+        : null,
+    };
+  } catch (err) {
+    if (err.status === 404) return null; // placa no registrada → el wizard pide crearla
+    throw err;
+  }
+};
 
-// { id, nombre, documento, celular, correo } | null
-export const buscarClientePorDocumento = (documento) =>
-  USE_MOCK ? mock.buscarClientePorDocumento(documento) : http.get(`/clientes/${documento}`);
+// GET /cliente/documento/{documento} → { id, nombre, documento, celular, correo } | null
+export const buscarClientePorDocumento = async (documento) => {
+  try {
+    const c = await http.get(`/cliente/documento/${documento}`);
+    return {
+      id: c.idPersona,
+      nombre: c.nombreCompleto,
+      documento: c.documento,
+      celular: c.celular,
+      correo: c.correo,
+    };
+  } catch (err) {
+    if (err.status === 404) return null; // documento no registrado → el wizard pide crearlo
+    throw err;
+  }
+};
 
 // { placa, idCliente?, cliente?: {documento,nombre,celular,correo}, vehiculo?: {marca,modelo,anio,color,vin} }
-export const crearOrden = (payload) =>
-  USE_MOCK ? mock.crearOrden(payload, getSessionUser()) : http.post('/ordenes', payload);
+// El backend crea el cliente y/o el vehículo si vienen en el payload, y luego la orden (transaccional).
+export const crearOrden = async (payload) => {
+  const body = { placa: payload.placa };
+  if (payload.idCliente) body.idCliente = payload.idCliente;
+  if (payload.cliente) {
+    body.cliente = {
+      documento: payload.cliente.documento,
+      nombreCompleto: payload.cliente.nombre,
+      celular: payload.cliente.celular,
+      correo: payload.cliente.correo || null,
+    };
+  }
+  if (payload.vehiculo) {
+    body.vehiculo = {
+      marca: payload.vehiculo.marca,
+      modelo: payload.vehiculo.modelo,
+      anio: payload.vehiculo.anio ?? null,
+      color: payload.vehiculo.color,
+      vin: payload.vehiculo.vin || null,
+    };
+  }
+  const orden = await http.post('/orden/nueva', body);
+  return { id: orden.idOrdenReparacion };
+};
