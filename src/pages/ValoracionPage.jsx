@@ -113,12 +113,14 @@ export default function ValoracionPage() {
         setResultado('sinresultado');
         return;
       }
-      if (orden.estadoValoracion === FILTROS_VALORACION.SIN_VALORAR) {
+      // La orden del backend no trae estadoValoracion: se deduce de la valoración.
+      const val = await valoracionService.getValoracion(orden.id);
+      if (!val) {
         navigate(`/valoracion/${orden.id}`);
         return;
       }
-      const val = await valoracionService.getValoracion(orden.id);
-      setResultado({ orden, valoracion: val });
+      const estadoValoracion = val.cargadaCesvi ? FILTROS_VALORACION.CARGADAS : FILTROS_VALORACION.SIN_CARGAR;
+      setResultado({ orden: { ...orden, estadoValoracion }, valoracion: val });
     } catch (e) {
       setError(e.message || 'No se pudo buscar la placa.');
     } finally {

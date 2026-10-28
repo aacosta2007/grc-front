@@ -42,7 +42,7 @@ export default function LoginPage() {
 
         <div className="login-card">
           <div className="login-title">INICIAR SESIÓN</div>
-          <div className="login-desc">Acceso para ADMIN, ASESOR y GERENTE. Los técnicos aún no tienen acceso web.</div>
+          {/*<div className="login-desc">Acceso para ADMIN, ASESOR y GERENTE. Los técnicos aún no tienen acceso web.</div>*/}
 
           <form onSubmit={onSubmit} noValidate>
             <Field label="CORREO" htmlFor="login-correo" style={{ marginTop: 20 }}>
@@ -77,11 +77,14 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
-
+        {/*
         <div className="login-demo">
           DEMO · avillalba@servimacromotor.co / admin123 · lbeltran@servimacromotor.co / asesor123 · rpena@servimacromotor.co / gerente123
         </div>
+        
+        
         <div className="login-footer">SINCRONIZACIÓN MANUAL CON CESVI COLOMBIA</div>
+        */}
       </div>
     </div>
   );

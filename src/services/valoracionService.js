@@ -1,22 +1,82 @@
-import http, { USE_MOCK } from './httpClient';
-import * as mock from './mock/mockApi';
-import { getSessionUser } from './session';
+import http from './httpClient';
+import { ordenDesdeBackend } from './ordenService';
+import { ACCION_PIEZA, FILTROS_VALORACION } from '../utils/constants';
+
+const ACCION_A_BACK = { [ACCION_PIEZA.REPARAR]: 'REPARACION', [ACCION_PIEZA.SUSTITUIR]: 'SUSTITUCION' };
+const ACCION_DESDE_BACK = { REPARACION: ACCION_PIEZA.REPARAR, SUSTITUCION: ACCION_PIEZA.SUSTITUIR };
+
+const GRAVEDAD_A_BACK = { LEVE: 'LEVE', MEDIA: 'MEDIO', GRAVE: 'FUERTE' };
+const GRAVEDAD_DESDE_BACK = { LEVE: 'LEVE', MEDIO: 'MEDIA', FUERTE: 'GRAVE' };
+
+const FILTRO_A_BACK = {
+  [FILTROS_VALORACION.SIN_VALORAR]: 'SIN_VALORAR',
+  [FILTROS_VALORACION.SIN_CARGAR]: 'SIN_CARGAR',
+  [FILTROS_VALORACION.CARGADAS]: 'CARGADAS',
+};
+
+const desdeBackend = (v) => ({
+  id: v.idValoracion,
+  idOrden: v.idOrdenReparacion,
+  descripcion: v.descripcionGeneral || '',
+  detalles: (v.detalles || []).map((d) => ({
+    id: d.idValoracionDetalle,
+    pieza: d.pieza,
+    accion: ACCION_DESDE_BACK[d.accion],
+    gravedad: d.gravedad ? GRAVEDAD_DESDE_BACK[d.gravedad] : null,
+    cantidad: d.cantidad,
+    observacion: d.observacion,
+  })),
+  imagenes: [],
+  cargadaCesvi: v.cargadaCesvi,
+  cargadaCesviAt: v.cargadaCesviAt,
+  usuario: v.autor,
+  creadaAt: v.createAt,
+  actualizadaAt: v.updateAt,
+});
+
+const aBackend = (data) => ({
+  descripcionGeneral: data.descripcion,
+  detalles: data.detalles.map((d) => ({
+    pieza: d.pieza,
+    accion: ACCION_A_BACK[d.accion],
+    gravedad: d.accion === ACCION_PIEZA.REPARAR ? GRAVEDAD_A_BACK[d.gravedad] : null,
+  })),
+});
 
 // filtro: valor de FILTROS_VALORACION → vistas de orden
-export const getOrdenesPorFiltro = (filtro) =>
-  USE_MOCK ? mock.getOrdenesPorFiltroValoracion(filtro) : http.get('/valoraciones/ordenes', { params: { filtro } });
+export async function getOrdenesPorFiltro(filtro) {
+  const ordenes = await http.get('/valoracion/ordenes', { params: { filtro: FILTRO_A_BACK[filtro] } });
+  // El backend no manda el estado de valoración, pero es justo el filtro pedido.
+  return ordenes.map((o) => ({ ...ordenDesdeBackend(o), estadoValoracion: filtro }));
+}
 
 // { 'Sin valorar': n, 'Sin cargar a CESVI': n, 'Cargadas a CESVI': n }
-export const getConteo = () => (USE_MOCK ? mock.getConteoValoracion() : http.get('/valoraciones/conteo'));
+export async function getConteo() {
+  const c = await http.get('/valoracion/conteo');
+  return {
+    [FILTROS_VALORACION.SIN_VALORAR]: c.sinValorar,
+    [FILTROS_VALORACION.SIN_CARGAR]: c.sinCargar,
+    [FILTROS_VALORACION.CARGADAS]: c.cargadas,
+  };
+}
 
-// { id, idOrden, descripcion, detalles:[{id,pieza,accion,gravedad}], imagenes:[{id,url,nombre}],
-//   cargadaCesvi, cargadaCesviAt, usuario, creadaAt, actualizadaAt } | null
-export const getValoracion = (idOrden) =>
-  USE_MOCK ? mock.getValoracion(idOrden) : http.get(`/ordenes/${idOrden}/valoracion`);
+// Valoración de la orden, o null si todavía no tiene (el backend responde 404).
+export async function getValoracion(idOrden) {
+  try {
+    return desdeBackend(await http.get(`/orden/${idOrden}/valoracion`));
+  } catch (e) {
+    if (e.status === 404) return null;
+    throw e;
+  }
+}
 
-// Guardado único: { descripcion, detalles:[{pieza,accion,gravedad}], imagenes:[{url,nombre}] }
-export const guardarValoracion = (idOrden, data) =>
-  USE_MOCK ? mock.guardarValoracion(idOrden, data, getSessionUser()) : http.put(`/ordenes/${idOrden}/valoracion`, data);
+// { descripcion, detalles:[{pieza,accion,gravedad}], imagenes } — esNueva decide POST (crear) o PUT (editar).
+// El PUT reemplaza la hoja completa: hay que mandar todas las piezas, no solo las nuevas.
+export async function guardarValoracion(idOrden, data, esNueva) {
+  const url = `/orden/${idOrden}/valoracion`;
+  const guardada = esNueva ? await http.post(url, aBackend(data)) : await http.put(url, aBackend(data));
+  return desdeBackend(guardada);
+}
 
 export const marcarCargadaCesvi = (idOrden) =>
-  USE_MOCK ? mock.marcarCargadaCesvi(idOrden) : http.post(`/ordenes/${idOrden}/valoracion/cesvi`);
+  http.patch(`/orden/${idOrden}/valoracion/cesvi`).then(desdeBackend);
