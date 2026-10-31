@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import * as ordenService from '../../services/ordenService';
 import { Button, ConfirmDialog, Alert, Spinner } from '../ui';
 import { fmtFecha } from '../../utils/format';
-import { ETAPAS, ETAPA_ENTREGADO_ID, etapaRequiereTecnico } from '../../utils/constants';
+import { ESTADO_ORDEN, ETAPAS_REPARACION, etapaRequiereTecnico } from '../../utils/constants';
 import StageChangeModal from '../StageChangeModal';
+import EntregaModal from './EntregaModal';
 
 const IconCalendario = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -44,6 +45,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
   const [errorDias, setErrorDias] = useState('');
 
   const [etapaModal, setEtapaModal] = useState(null);
+  const [entregaModal, setEntregaModal] = useState(false);
 
   const cargarHistorial = useCallback(async () => {
     setCargandoHistorial(true);
@@ -78,7 +80,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
   };
 
   const nDias = Number(diasEstimados);
-  const diasValidos = Number.isInteger(nDias) && nDias > 0;
+  const diasValidos = Number.isInteger(nDias) && nDias > 0 && nDias <= 30;
 
   const confirmarDias = async () => {
     setBusyDias(true);
@@ -94,7 +96,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
     }
   };
 
-  const entregada = orden.idEtapaActual === ETAPA_ENTREGADO_ID;
+  const entregada = orden.estado === ESTADO_ORDEN.ENTREGADA;
   const puedeCambiarEtapa = !!orden.fechaIngresoReparacion && !entregada;
 
   const etapasVisitadas = orden.etapasVisitadas || [];
@@ -167,6 +169,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
                 <input
                   type="number"
                   min="1"
+                  max="30"
                   step="1"
                   aria-label="Días estimados de entrega"
                   value={diasEstimados}
@@ -201,7 +204,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
         <Spinner label="CARGANDO HISTORIAL" />
       ) : (
         <div className="ficha-etapas-grid">
-          {ETAPAS.map((etapa) => {
+          {ETAPAS_REPARACION.map((etapa) => {
             const histEntry = historial.find((h) => h.idEtapa === etapa.id) || null;
             const visitada = etapasVisitadas.includes(etapa.id);
             const enCurso = histEntry && histEntry.fechaFin === null;
@@ -238,6 +241,32 @@ export default function TabReparacion({ orden, onOrdenChange }) {
               </div>
             );
           })}
+
+          <div
+            className="grc-card ficha-etapa-card"
+            style={{ borderLeft: `3px solid ${entregada ? 'var(--green)' : 'var(--line)'}` }}
+          >
+            <div className="ficha-etapa-top">
+              <div className="ficha-etapa-nombre">Entregado</div>
+              {puedeCambiarEtapa && (
+                <button
+                  type="button"
+                  className="ficha-icon-btn"
+                  aria-label="Registrar la entrega hoy"
+                  onClick={() => setEntregaModal(true)}
+                >
+                  <IconCalendario />
+                </button>
+              )}
+            </div>
+            <div className="ficha-etapa-tecnico">Fecha de entrega · cierra la orden</div>
+            <div className="ficha-etapa-pie">
+              <span className="grc-mono" style={{ color: entregada ? 'var(--green)' : 'var(--line)' }}>
+                {entregada ? 'ENTREGADA' : 'PENDIENTE'}
+              </span>
+              <span className="grc-mono grc-muted">{entregada ? fmtFecha(orden.fechaEntregaReal) : '—'}</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -261,6 +290,18 @@ export default function TabReparacion({ orden, onOrdenChange }) {
         onCancel={() => (busyDias ? null : setConfirmDias(false))}
       />
       {errorDias && <Alert type="error">{errorDias}</Alert>}
+
+      {entregaModal && (
+        <EntregaModal
+          orden={orden}
+          onClose={() => setEntregaModal(false)}
+          onSaved={(ordenActualizada) => {
+            onOrdenChange(ordenActualizada);
+            setEntregaModal(false);
+            cargarHistorial();
+          }}
+        />
+      )}
 
       {etapaModal && (
         <StageChangeModal

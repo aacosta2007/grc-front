@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Spinner } from '../components/ui';
 import StageChangeModal from '../components/StageChangeModal';
 import * as ordenService from '../services/ordenService';
-import { ETAPAS, ETAPA_BANCADA_ID, COLUMNA_ASIGNADO, getEtapa } from '../utils/constants';
+import { ETAPAS_REPARACION, ETAPA_BANCADA_ID, COLUMNA_ASIGNADO, getEtapa } from '../utils/constants';
 import { fmtOrden, pluralDias } from '../utils/format';
 import '../styles/Backlog.css';
 
 const COLUMNAS_BASE = [
   { ...COLUMNA_ASIGNADO, nota: 'SIN TÉCNICO' },
-  ...ETAPAS.map((e) => ({ id: e.id, nombre: e.nombre, nota: e.id === ETAPA_BANCADA_ID ? 'NO PIDE TÉCNICO' : '' })),
+  ...ETAPAS_REPARACION.map((e) => ({ id: e.id, nombre: e.nombre, nota: e.id === ETAPA_BANCADA_ID ? 'NO PIDE TÉCNICO' : '' })),
 ];
 
 const COLOR_ALERTA = {
@@ -169,7 +169,7 @@ export default function BacklogPage() {
     cargar().then(() => setAviso(`${ordenActualizada.placa} pasó a ${etapaNombre}`));
   };
 
-  const destinosValidos = (orden) => ETAPAS.filter((e) => !estaBloqueada({ id: e.id, nombre: e.nombre }, orden));
+  const destinosValidos = (orden) => ETAPAS_REPARACION.filter((e) => !estaBloqueada({ id: e.id, nombre: e.nombre }, orden));
 
   if (cargando) return <Spinner label="CARGANDO TABLERO" />;
   if (error) return <Alert type="error">{error}</Alert>;
