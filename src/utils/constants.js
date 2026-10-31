@@ -68,6 +68,10 @@ export const ETAPAS = [
 export const ETAPA_BANCADA_ID = 3;
 export const ETAPA_ENTREGADO_ID = 10;
 
+// Etapas de la ficha y del tablero. La entrega no es una etapa: se registra como una fecha
+// (PATCH /orden/{id}/entregar-orden). ETAPAS conserva "Entregado" para el mock.
+export const ETAPAS_REPARACION = ETAPAS.filter((e) => e.id !== ETAPA_ENTREGADO_ID);
+
 // Etapas en las que el modal de cambio de etapa exige técnico.
 // Bancada no lleva técnico; "Listo para entregar" y "Entregado" no tienen especialidad asociada.
 export const etapaRequiereTecnico = (idEtapa) => {

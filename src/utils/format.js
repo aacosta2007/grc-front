@@ -1,7 +1,15 @@
 const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const MS_DIA = 24 * 60 * 60 * 1000;
 
-const toDate = (d) => (d instanceof Date ? d : new Date(d));
+const toDate = (d) => {
+  if (d instanceof Date) return d;
+  // "YYYY-MM-DD" (LocalDate del backend) → medianoche local, no UTC
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split('-').map(Number);
+    return new Date(y, m - 1, day);
+  }
+  return new Date(d);
+};
 
 export const startOfDay = (d) => {
   const x = toDate(d);
