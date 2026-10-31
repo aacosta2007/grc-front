@@ -1,10 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Mono } from '../ui';
 import * as valoracionService from '../../services/valoracionService';
-import { ACCION_PIEZA, FILTROS_VALORACION, GRAVEDADES } from '../../utils/constants';
+import { ACCION_PIEZA, FILTROS_VALORACION, GRAVEDADES, accionLlevaGravedad } from '../../utils/constants';
 import { fmtOrden, fmtPlaca } from '../../utils/format';
 import { agruparBloques, estadoValoracionTag } from '../../utils/valoracionExport';
 import '../../styles/Valoracion.css';
+
+const ACCIONES = [ACCION_PIEZA.REPARAR, ACCION_PIEZA.SUSTITUIR, ACCION_PIEZA.PINTAR];
 
 let idSeq = 0;
 const idLocal = (prefijo) => `${prefijo}-${Date.now()}-${idSeq++}`;
@@ -47,7 +49,7 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
     if (!nombre) return;
     setPiezas((prev) => [
       ...prev,
-      { id: idLocal('p'), pieza: nombre, accion: piezaAccion, gravedad: piezaAccion === ACCION_PIEZA.REPARAR ? piezaGravedad : null },
+      { id: idLocal('p'), pieza: nombre, accion: piezaAccion, gravedad: accionLlevaGravedad(piezaAccion) ? piezaGravedad : null },
     ]);
     setPiezaNombre('');
   };
@@ -79,7 +81,7 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
     try {
       const payload = {
         descripcion: descripcion.trim(),
-        detalles: piezas.map((p) => ({ pieza: p.pieza, accion: p.accion, gravedad: p.accion === ACCION_PIEZA.REPARAR ? p.gravedad : null })),
+        detalles: piezas.map((p) => ({ pieza: p.pieza, accion: p.accion, gravedad: accionLlevaGravedad(p.accion) ? p.gravedad : null })),
         imagenes: fotos.map((f) => ({ url: f.url, nombre: f.nombre })),
       };
       const v = await valoracionService.guardarValoracion(orden.id, payload, !valoracion);
@@ -150,24 +152,19 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
               />
             </div>
             <div className="hoja-segmento" role="group" aria-label="Acción sobre la pieza">
-              <button
-                type="button"
-                className={`hoja-seg-btn ${piezaAccion === ACCION_PIEZA.REPARAR ? 'is-active' : ''}`}
-                aria-pressed={piezaAccion === ACCION_PIEZA.REPARAR}
-                onClick={() => setPiezaAccion(ACCION_PIEZA.REPARAR)}
-              >
-                REPARAR
-              </button>
-              <button
-                type="button"
-                className={`hoja-seg-btn ${piezaAccion === ACCION_PIEZA.SUSTITUIR ? 'is-active' : ''}`}
-                aria-pressed={piezaAccion === ACCION_PIEZA.SUSTITUIR}
-                onClick={() => setPiezaAccion(ACCION_PIEZA.SUSTITUIR)}
-              >
-                SUSTITUIR
-              </button>
+              {ACCIONES.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  className={`hoja-seg-btn ${piezaAccion === a ? 'is-active' : ''}`}
+                  aria-pressed={piezaAccion === a}
+                  onClick={() => setPiezaAccion(a)}
+                >
+                  {a}
+                </button>
+              ))}
             </div>
-            {piezaAccion === ACCION_PIEZA.REPARAR && (
+            {accionLlevaGravedad(piezaAccion) && (
               <div style={{ marginTop: 13 }}>
                 <label htmlFor="hoja-pieza-gravedad">GRAVEDAD</label>
                 <select id="hoja-pieza-gravedad" value={piezaGravedad} onChange={(e) => setPiezaGravedad(e.target.value)}>

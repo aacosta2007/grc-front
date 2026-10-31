@@ -3,7 +3,7 @@
 import { db, persist, nextId, delay } from './db';
 import {
   ETAPA_ENTREGADO_ID, UBICACION, ESTADO_ORDEN, ETAPAS_CARGA,
-  DIAS_PROXIMO_A_VENCER, ACCION_PIEZA, FILTROS_VALORACION, ROLES_ASIGNABLES,
+  DIAS_PROXIMO_A_VENCER, accionLlevaGravedad, FILTROS_VALORACION, ROLES_ASIGNABLES,
   getEtapa, etapaRequiereTecnico,
 } from '../../utils/constants';
 import { diffDias, addDias } from '../../utils/format';
@@ -415,7 +415,7 @@ export async function guardarValoracion(idOrden, data, usuario) {
   if (!detalles.length) throw new ApiError('No se puede guardar una valoración vacía: agrega al menos una pieza');
   const norm = detalles.map((d, i) => ({
     id: i + 1, pieza: d.pieza.trim(), accion: d.accion,
-    gravedad: d.accion === ACCION_PIEZA.REPARAR ? d.gravedad || null : null,
+    gravedad: accionLlevaGravedad(d.accion) ? d.gravedad || null : null,
   }));
   const imagenes = (data.imagenes || []).map((img, i) => ({ id: i + 1, url: img.url, nombre: img.nombre || `valoracion_${orden.id}_${i + 1}.jpg` }));
   let v = db.valoraciones.find((x) => x.idOrden === orden.id);

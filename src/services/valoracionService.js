@@ -1,9 +1,9 @@
 import http from './httpClient';
 import { ordenDesdeBackend } from './ordenService';
-import { ACCION_PIEZA, FILTROS_VALORACION } from '../utils/constants';
+import { ACCION_PIEZA, FILTROS_VALORACION, accionLlevaGravedad } from '../utils/constants';
 
-const ACCION_A_BACK = { [ACCION_PIEZA.REPARAR]: 'REPARACION', [ACCION_PIEZA.SUSTITUIR]: 'SUSTITUCION' };
-const ACCION_DESDE_BACK = { REPARACION: ACCION_PIEZA.REPARAR, SUSTITUCION: ACCION_PIEZA.SUSTITUIR };
+const ACCION_A_BACK = { [ACCION_PIEZA.REPARAR]: 'REPARACION', [ACCION_PIEZA.SUSTITUIR]: 'SUSTITUCION', [ACCION_PIEZA.PINTAR]: 'PINTAR' };
+const ACCION_DESDE_BACK = { REPARACION: ACCION_PIEZA.REPARAR, SUSTITUCION: ACCION_PIEZA.SUSTITUIR, PINTAR: ACCION_PIEZA.PINTAR };
 
 const GRAVEDAD_A_BACK = { LEVE: 'LEVE', MEDIA: 'MEDIO', GRAVE: 'FUERTE' };
 const GRAVEDAD_DESDE_BACK = { LEVE: 'LEVE', MEDIO: 'MEDIA', FUERTE: 'GRAVE' };
@@ -39,7 +39,7 @@ const aBackend = (data) => ({
   detalles: data.detalles.map((d) => ({
     pieza: d.pieza,
     accion: ACCION_A_BACK[d.accion],
-    gravedad: d.accion === ACCION_PIEZA.REPARAR ? GRAVEDAD_A_BACK[d.gravedad] : null,
+    gravedad: accionLlevaGravedad(d.accion) ? GRAVEDAD_A_BACK[d.gravedad] : null,
   })),
 });
 

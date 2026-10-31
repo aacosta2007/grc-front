@@ -199,7 +199,7 @@
 
 .val-pdfview-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 1.15fr) minmax(280px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: 14px;
   margin-top: 16px;
   align-items: start;
@@ -220,68 +220,18 @@
 }
 .val-doc-wrap { padding: 16px; overflow-x: auto; }
 
+/* En móvil la hoja se reemplaza por tarjetas: se quita el marco del panel */
+@media (max-width: 639px) {
+  .val-doc-card { background: transparent; border: none; border-radius: 0; overflow: visible; }
+  .val-doc-cardhead { display: none; }
+  .val-doc-wrap { padding: 16px 0 0; overflow: visible; }
+  .val-visor-hoja { width: auto; }
+}
+
 .val-side { display: flex; flex-direction: column; gap: 14px; }
 .val-side-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 
 .val-hist-row { display: flex; gap: 12px; margin-top: 11px; }
-
-/* ───────── Documento (papel), compartido con el visor de pantalla completa ───────── */
-
-.val-doc {
-  width: 100%;
-  max-width: 816px;
-  margin: 0 auto;
-  background: #F2F2F2;
-  color: #0D0D0D;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 40px 36px;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
-}
-
-.val-doc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.val-doc-brand { font-family: var(--font-condensed); font-weight: 700; font-size: 26px; letter-spacing: 0.02em; }
-.val-doc-brandsub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: #595959; margin-top: 3px; }
-.val-doc-meta { text-align: right; font-family: var(--font-mono); font-size: 11px; color: #595959; line-height: 1.8; }
-
-.val-doc-rule { height: 3px; background: #0D0D0D; }
-
-.val-doc-cabecera { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; }
-.val-doc-k { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; color: #BFBFBF; }
-.val-doc-v { font-size: 15px; font-weight: 600; margin-top: 4px; word-break: break-word; }
-
-.val-doc-desc { border-top: 1px solid #BFBFBF; padding-top: 14px; }
-.val-doc-desctext { font-size: 13px; color: #262626; line-height: 1.6; margin-top: 6px; white-space: pre-wrap; }
-
-.val-doc-tabla { margin-top: 4px; }
-.val-doc-tablahead {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: #595959;
-  border-bottom: 2px solid #0D0D0D;
-  padding-bottom: 6px;
-}
-.val-doc-fila { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; border-bottom: 1px solid #D9D9D9; padding: 9px 0; }
-.val-doc-pieza { font-weight: 600; }
-.val-doc-detalle { font-family: var(--font-mono); font-size: 11px; color: #595959; white-space: nowrap; }
-.val-doc-vacio { font-size: 12.5px; color: #595959; padding: 10px 0; }
-
-.val-doc-footer {
-  margin-top: auto;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  color: #595959;
-  border-top: 1px solid #BFBFBF;
-  padding-top: 14px;
-}
 
 /* ───────── Visor a pantalla completa ───────── */
 
@@ -327,8 +277,8 @@
 }
 
 .val-visor-body { flex: 1; overflow: auto; padding: 28px; }
+.val-visor-hoja { width: max-content; max-width: none; margin: 0 auto; }
 
 @media (max-width: 560px) {
-  .val-doc { padding: 26px 20px; }
   .val-visor-bar { padding: 12px 14px; }
 }
