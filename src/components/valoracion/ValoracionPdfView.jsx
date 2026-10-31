@@ -4,7 +4,8 @@ import * as valoracionService from '../../services/valoracionService';
 import { fmtFechaCorta, fmtOrden, fmtPlaca } from '../../utils/format';
 import { estadoValoracionTag, generarPdfValoracion, generarZipFotos } from '../../utils/valoracionExport';
 import { FILTROS_VALORACION } from '../../utils/constants';
-import PdfViewerModal, { DocumentoValoracion } from './PdfViewerModal';
+import PdfViewerModal from './PdfViewerModal';
+import HojaValoracionDocumento from './HojaValoracionDocumento';
 import '../../styles/Valoracion.css';
 
 // Vista tipo PDF de la hoja de valoración ya guardada: previsualización + descargas + carga a CESVI.
@@ -28,6 +29,8 @@ export default function ValoracionPdfView({ orden, valoracion, onBack, onEditar,
       setError(e.message || 'No se pudo generar el PDF de la hoja.');
     }
   };
+
+  const imprimir = () => window.print();
 
   const descargarZip = async () => {
     setError('');
@@ -77,6 +80,10 @@ export default function ValoracionPdfView({ orden, valoracion, onBack, onEditar,
         )}
       </div>
 
+      <Button className="hvd-print-movil" onClick={imprimir}>
+        IMPRIMIR
+      </Button>
+
       {error && (
         <Alert type="error" style={{ marginTop: 14 }}>
           {error}
@@ -94,7 +101,7 @@ export default function ValoracionPdfView({ orden, valoracion, onBack, onEditar,
             </Mono>
           </div>
           <div className="val-doc-wrap">
-            <DocumentoValoracion orden={orden} valoracion={valoracion} />
+            <HojaValoracionDocumento orden={orden} valoracion={valoracion} />
           </div>
         </div>
 
@@ -104,6 +111,9 @@ export default function ValoracionPdfView({ orden, valoracion, onBack, onEditar,
               Descargas
             </div>
             <div className="val-side-actions">
+              <Button block className="hvd-print-escritorio" onClick={imprimir}>
+                IMPRIMIR
+              </Button>
               <Button variant="outline" block onClick={descargarPdf}>
                 DESCARGAR PDF
               </Button>

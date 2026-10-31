@@ -106,9 +106,13 @@ export const ESTADO_ORDEN = {
 export const ACCION_PIEZA = {
   SUSTITUIR: 'SUSTITUIR',
   REPARAR: 'REPARAR',
+  PINTAR: 'PINTAR',
 };
 
 export const GRAVEDADES = ['LEVE', 'MEDIA', 'GRAVE'];
+
+// Reparar y pintar se valoran con gravedad; sustituir no.
+export const accionLlevaGravedad = (accion) => accion === ACCION_PIEZA.REPARAR || accion === ACCION_PIEZA.PINTAR;
 
 // Tipos de alerta / listas filtradas desde el Dashboard
 export const TIPOS_AVISO = {

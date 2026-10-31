@@ -15,17 +15,15 @@ const ESTADO_TAG = {
 
 export const estadoValoracionTag = (estado) => ESTADO_TAG[estado] || { label: estado || '—', color: 'var(--sub)' };
 
-// ── Orden de piezas: bloque SUSTITUIR arriba, REPARAR abajo; alfabético dentro de cada bloque ──
+// ── Orden de piezas: bloques SUSTITUIR, REPARAR y PINTAR; alfabético dentro de cada bloque ──
+const piezasDe = (detalles, accion) =>
+  detalles.filter((d) => d.accion === accion).sort((a, b) => a.pieza.localeCompare(b.pieza, 'es'));
+
 export function agruparBloques(detalles = []) {
-  const sust = detalles
-    .filter((d) => d.accion === ACCION_PIEZA.SUSTITUIR)
-    .sort((a, b) => a.pieza.localeCompare(b.pieza, 'es'));
-  const rep = detalles
-    .filter((d) => d.accion === ACCION_PIEZA.REPARAR)
-    .sort((a, b) => a.pieza.localeCompare(b.pieza, 'es'));
   return [
-    { titulo: 'SUSTITUIR', items: sust, vacio: 'Ninguna pieza por sustituir' },
-    { titulo: 'REPARAR', items: rep, vacio: 'Ninguna pieza por reparar' },
+    { accion: ACCION_PIEZA.SUSTITUIR, titulo: 'SUSTITUIR', items: piezasDe(detalles, ACCION_PIEZA.SUSTITUIR), vacio: 'Ninguna pieza por sustituir' },
+    { accion: ACCION_PIEZA.REPARAR, titulo: 'REPARAR', items: piezasDe(detalles, ACCION_PIEZA.REPARAR), vacio: 'Ninguna pieza por reparar' },
+    { accion: ACCION_PIEZA.PINTAR, titulo: 'PINTAR', items: piezasDe(detalles, ACCION_PIEZA.PINTAR), vacio: 'Ninguna pieza por pintar' },
   ];
 }
 
@@ -33,7 +31,7 @@ export const ordenarDetalles = (detalles = []) => agruparBloques(detalles).flatM
 
 export const detalleTexto = (d) => {
   if (d.accion === ACCION_PIEZA.SUSTITUIR) return 'SUSTITUIR';
-  return d.gravedad ? `REPARAR · ${d.gravedad}` : 'REPARAR';
+  return d.gravedad ? `${d.accion} · ${d.gravedad}` : d.accion;
 };
 
 // ── Descarga de un blob generado en memoria ──
