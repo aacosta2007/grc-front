@@ -22,16 +22,16 @@ El usuario autenticado se obtiene de la sesión (`session.js`); las páginas NO 
   idEtapaActual,              // id del catálogo ETAPAS o null
   etapaActual,                // nombre de etapa o null
   columna,                    // 'Asignado' | nombre de etapa | null (no está en el tablero)
-  tecnicoActual,              // { id, nombre, activo, especialidad } | null
+  tecnicoActual,              // { id, nombre } | null (técnico de la etapa abierta; lo calcula el backend)
   fechaInicioEtapa, diasEnEtapa,
   fechaCreacion, fechaIngresoCotizar, fechaIngresoReparacion,
   diasEstimadoEntrega, fechaEntregaEstimada, diasEnTaller,
-  etapasVisitadas,            // [idEtapa] según HistorialEtapas (bloqueo por historial)
+  etapasVisitadas,            // [idEtapa] en orden de visita (OrdenEtapaFecha; lo calcula el backend)
   asesor,                     // nombre del usuario del último cambio de etapa
   creador,                    // nombre del usuario que creó la orden
   siniestro,                  // string | null
-  alertas: { critico, vencido, proximo, proceso, enTaller, fuera, diasParaEntrega },
-  alerta,                     // 'vencido' | 'critico' | 'proximo' | 'completado' | 'normal' (para color)
+  alertas: { critico, vencido, proximo, proceso, diasParaEntrega },   // del backend (el mock agrega enTaller y fuera)
+  alerta,                     // 'vencido' | 'critico' | 'proximo' | 'normal' (para color; el backend la manda en MAYÚSCULAS)
   estadoValoracion,           // 'Sin valorar' | 'Sin cargar a CESVI' | 'Cargadas a CESVI'
 }
 ```
