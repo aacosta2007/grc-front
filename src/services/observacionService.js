@@ -62,6 +62,8 @@ export const getFotosOrden = (idOrden) =>
           url: f.url,
           nombre: f.nombre || '',
           origen: f.origen,
+          autor: f.autor || '',
+          rol: f.rol || '',
           fecha: f.fecha,
         }))
       );
