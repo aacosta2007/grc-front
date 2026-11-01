@@ -1,13 +1,14 @@
 import http, { USE_MOCK } from './httpClient';
 import * as mock from './mock/mockApi';
 import { getSessionUser } from './session';
+import { ETAPA_ENTREGADO_ID } from '../utils/constants';
 
 // Adapta ObservacionResponseDto del backend a lo que usa TabObservaciones.
 const observacionDesdeBackend = (o) => ({
   id: o.idObservacion,
   idOrden: o.idOrdenReparacion,
   idEtapa: o.idEtapa,
-  etapa: o.nombreEtapa,
+  etapa: o.nombreEtapa || 'Entrega', // idEtapa null = observación de entrega
   autor: o.autor,
   fecha: o.createAt,
   texto: o.nota,
@@ -21,15 +22,16 @@ export const getObservaciones = (idOrden) =>
     ? mock.getObservaciones(idOrden)
     : http.get(`/orden/${idOrden}/observaciones`).then((lista) => lista.map(observacionDesdeBackend));
 
-// { idOrden, idEtapa (solo etapas visitadas), texto, imagenes:[{url,nombre}], notificar }
+// { idOrden, idEtapa (etapa visitada, o null = "Entrega"), texto, imagenes:[{url,nombre}], notificar, entregada }
+// En una orden entregada no se manda ubicación: el backend la rechaza (409).
 export const crearObservacion = (data) =>
   USE_MOCK
-    ? mock.crearObservacion(data, getSessionUser())
+    ? mock.crearObservacion({ ...data, idEtapa: data.idEtapa ?? ETAPA_ENTREGADO_ID }, getSessionUser())
     : http
         .post(`/orden/${data.idOrden}/observaciones`, {
           idEtapa: data.idEtapa,
           nota: data.texto,
-          ubicacion: 'EN_TALLER',
+          ...(data.entregada ? {} : { ubicacion: 'EN_TALLER' }),
           visibleCliente: data.notificar,
         })
         .then(observacionDesdeBackend);

@@ -2,7 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as observacionService from '../../services/observacionService';
 import { Alert, Button, Spinner, Empty } from '../ui';
 import { fmtFechaHora } from '../../utils/format';
-import { getEtapa } from '../../utils/constants';
+import { ESTADO_ORDEN, ETAPA_ENTREGADO_ID, getEtapa } from '../../utils/constants';
+
+// Valor del selector para la opción "Entrega" (se envía idEtapa = null)
+const OPCION_ENTREGA = 'entrega';
 
 // Imagen de una observación ya guardada: se descarga con token y se muestra con object URL.
 function ImagenAdjunta({ imagen }) {
@@ -33,12 +36,17 @@ export default function TabObservaciones({ orden }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
+  const entregada = orden.estado === ESTADO_ORDEN.ENTREGADA;
   const etapasOpciones = (orden.etapasVisitadas || [])
+    .filter((id) => id !== ETAPA_ENTREGADO_ID)
     .map((id) => getEtapa(id))
     .filter(Boolean)
     .sort((a, b) => a.orden - b.orden);
 
-  const [idEtapa, setIdEtapa] = useState(etapasOpciones[0] ? String(etapasOpciones[0].id) : '');
+  // En una orden entregada la opción por defecto es "Entrega"
+  const [idEtapa, setIdEtapa] = useState(
+    entregada ? OPCION_ENTREGA : etapasOpciones[0] ? String(etapasOpciones[0].id) : ''
+  );
   const [texto, setTexto] = useState('');
   const [imagenes, setImagenes] = useState([]);
   const urlsRef = useRef(new Set());
@@ -71,7 +79,7 @@ export default function TabObservaciones({ orden }) {
     []
   );
 
-  const hayEtapas = etapasOpciones.length > 0;
+  const hayEtapas = etapasOpciones.length > 0 || entregada;
 
   const agregarImagenes = (e) => {
     const files = Array.from(e.target.files || []);
@@ -106,7 +114,8 @@ export default function TabObservaciones({ orden }) {
     try {
       const creada = await observacionService.crearObservacion({
         idOrden: orden.id,
-        idEtapa: Number(idEtapa),
+        idEtapa: idEtapa === OPCION_ENTREGA ? null : Number(idEtapa),
+        entregada,
         texto: texto.trim(),
         notificar,
       });
@@ -181,6 +190,7 @@ export default function TabObservaciones({ orden }) {
         <div>
           <label htmlFor="obs-etapa">ETAPA</label>
           <select id="obs-etapa" value={idEtapa} onChange={(e) => setIdEtapa(e.target.value)} disabled={!hayEtapas}>
+            {entregada && <option value={OPCION_ENTREGA}>Entrega</option>}
             {etapasOpciones.map((et) => (
               <option key={et.id} value={et.id}>
                 {et.nombre}
