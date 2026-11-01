@@ -2,13 +2,18 @@ import http, { USE_MOCK } from './httpClient';
 import * as mock from './mock/mockApi';
 import { getSessionUser } from './session';
 import { COLUMNA_ASIGNADO, ESTADO_ORDEN, ETAPA_ENTREGADO_ID, getEtapa } from '../utils/constants';
-import { diffDias } from '../utils/format';
 
 // Todas las funciones de órdenes devuelven la "vista de orden" enriquecida
 // (ver src/services/README.md).
 
-// Adapta OrdenReparacionResponseDto del backend a la vista de orden. Por ahora solo
-// llena los campos que el backend ya da (sin alertas, técnico actual ni días en etapa).
+// Columna del tablero: solo las órdenes activas con ingreso al taller están en él.
+const columnaDe = (o) => {
+  if (o.estado !== 'ACTIVA' || !o.fechaIngresoReparacion) return null;
+  return o.idEtapaActual ? getEtapa(o.idEtapaActual)?.nombre ?? o.nombreEtapaActual : COLUMNA_ASIGNADO.nombre;
+};
+
+// Adapta OrdenReparacionResponseDto del backend a la vista de orden. Los campos
+// calculados (técnico actual, días, etapas visitadas y alertas) ya vienen del backend.
 export const ordenDesdeBackend = (o) => {
   const v = o.vehiculo || {};
   const c = o.cliente || {};
@@ -23,6 +28,14 @@ export const ordenDesdeBackend = (o) => {
     ubicacionActual: o.ubicacionActual,
     idEtapaActual: o.idEtapaActual,
     etapaActual: o.nombreEtapaActual,
+    columna: columnaDe(o),
+    tecnicoActual: o.idTecnicoActual ? { id: o.idTecnicoActual, nombre: o.nombreTecnicoActual } : null,
+    fechaInicioEtapa: o.fechaInicioEtapa,
+    diasEnEtapa: o.diasEnEtapa,
+    diasEnTaller: o.diasEnTaller,
+    etapasVisitadas: o.etapasVisitadas || [],
+    alertas: o.alertas || null,
+    alerta: (o.alerta || 'NORMAL').toLowerCase(), // el backend manda VENCIDO | CRITICO | PROXIMO | NORMAL
     fechaCreacion: o.createAt,
     fechaIngresoCotizar: o.fechaIngresoCotizar,
     fechaIngresoReparacion: o.fechaIngresoReparacion,
@@ -41,15 +54,11 @@ const hoyLocal = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const etapasVisitadasDe = (historial) => [...new Set(historial.map((h) => h.idEtapa))];
-
 export const getOrdenes = () => (USE_MOCK ? mock.getOrdenes() : http.get('/ordenes'));
 
-// La orden del backend + etapasVisitadas (sale del historial; el backend no la da).
 export const getOrden = async (idOrden) => {
   if (USE_MOCK) return mock.getOrden(idOrden);
-  const [orden, historial] = await Promise.all([http.get(`/orden/${idOrden}`), getHistorialEtapas(idOrden)]);
-  return { ...ordenDesdeBackend(orden), etapasVisitadas: etapasVisitadasDe(historial) };
+  return ordenDesdeBackend(await http.get(`/orden/${idOrden}`));
 };
 
 // Orden más reciente (activa si existe) de una placa, o null.
@@ -63,29 +72,11 @@ export const buscarOrdenPorPlaca = async (placa) => {
 };
 
 // Tablero: órdenes activas con ingreso al taller (columna "Asignado" o la de su etapa).
+// Una sola petición: técnico, días y alertas ya vienen calculados en cada orden.
 export const getOrdenesKanban = async () => {
   if (USE_MOCK) return mock.getOrdenesKanban();
   const activas = await http.get('/orden');
-  const enTaller = activas.filter((o) => o.fechaIngresoReparacion);
-  return Promise.all(
-    enTaller.map(async (o) => {
-      const orden = ordenDesdeBackend(o);
-      const historial = await getHistorialEtapas(orden.id);
-      const ultima = historial[historial.length - 1] || null;
-      const fechaInicioEtapa = ultima ? ultima.fechaInicio : orden.fechaIngresoReparacion;
-      const alertas = mock.calcularAlertas(orden, ultima);
-      return {
-        ...orden,
-        columna: orden.idEtapaActual ? getEtapa(orden.idEtapaActual)?.nombre : COLUMNA_ASIGNADO.nombre,
-        etapasVisitadas: etapasVisitadasDe(historial),
-        tecnicoActual: ultima && ultima.fechaFin === null ? ultima.tecnico : null,
-        fechaInicioEtapa,
-        diasEnEtapa: diffDias(fechaInicioEtapa),
-        alertas,
-        alerta: alertas.vencido ? 'vencido' : alertas.critico ? 'critico' : alertas.proximo ? 'proximo' : 'normal',
-      };
-    })
-  );
+  return activas.map(ordenDesdeBackend).filter((o) => o.columna);
 };
 
 // [{ id, idOrden, idEtapa, etapa, tecnico:{id,nombre}|null, usuario, fechaInicio, fechaFin }]
@@ -105,12 +96,10 @@ export const getHistorialEtapas = async (idOrden) => {
   }));
 };
 
-// Las acciones de la ficha devuelven la orden completa (con etapasVisitadas): la respuesta
-// del PATCH no la trae y, si se usara tal cual, las etapas visitadas volverían a PENDIENTE.
-const patchYRecargar = async (idOrden, ruta, body) => {
-  await http.patch(`/orden/${idOrden}/${ruta}`, body);
-  return getOrden(idOrden);
-};
+// Las acciones de la ficha devuelven la orden completa: la respuesta del PATCH ya trae
+// etapasVisitadas y los demás campos calculados, así que no hace falta volver a pedirla.
+const patchYRecargar = async (idOrden, ruta, body) =>
+  ordenDesdeBackend(await http.patch(`/orden/${idOrden}/${ruta}`, body));
 
 // { idOrden, idEtapa, idTecnico (null solo en etapas sin técnico), nota, notificar }
 export const cambiarEtapa = (data) =>

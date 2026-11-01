@@ -17,6 +17,14 @@ const ordenDto = (extra = {}) => ({
   asesor: null,
   idEtapaActual: null,
   nombreEtapaActual: null,
+  idTecnicoActual: null,
+  nombreTecnicoActual: null,
+  fechaInicioEtapa: null,
+  diasEnEtapa: 0,
+  diasEnTaller: 0,
+  etapasVisitadas: [],
+  alertas: { critico: false, vencido: false, proximo: false, proceso: true, diasParaEntrega: 15 },
+  alerta: 'NORMAL',
   estado: 'ACTIVA',
   ubicacionActual: 'EN_TALLER',
   fechaIngresoCotizar: '2026-10-31',
@@ -92,33 +100,58 @@ describe('getHistorialEtapas', () => {
 });
 
 describe('getOrden', () => {
-  it('adapta el DTO y agrega etapasVisitadas sin repetidos', async () => {
+  it('adapta el DTO con los campos calculados en una sola petición', async () => {
     rutasGet({
-      '/orden/17': ordenDto({ idEtapaActual: 2, nombreEtapaActual: 'Latonería' }),
-      '/orden/17/etapas': [hist(1, '2026-10-31T08:00:00'), hist(2, '2026-10-31T09:00:00'), hist(1, '2026-10-31T10:00:00')],
+      '/orden/17': ordenDto({
+        idEtapaActual: 2,
+        nombreEtapaActual: 'Latonería',
+        idTecnicoActual: 16,
+        nombreTecnicoActual: 'Luis Latonero',
+        fechaInicioEtapa: '2026-10-28T08:00:00',
+        diasEnEtapa: 3,
+        diasEnTaller: 5,
+        etapasVisitadas: [1, 2],
+        alertas: { critico: false, vencido: false, proximo: true, proceso: true, diasParaEntrega: 2 },
+        alerta: 'PROXIMO',
+      }),
     });
 
     const o = await ordenService.getOrden(17);
 
+    expect(http.get).toHaveBeenCalledTimes(1);
     expect(o).toMatchObject({
       id: 17,
       placa: 'XXX123',
       cliente: { id: 4, nombre: 'Adrian Acosta' },
       idEtapaActual: 2,
+      columna: 'Latonería',
+      tecnicoActual: { id: 16, nombre: 'Luis Latonero' },
+      fechaInicioEtapa: '2026-10-28T08:00:00',
+      diasEnEtapa: 3,
+      diasEnTaller: 5,
+      etapasVisitadas: [1, 2],
+      alertas: { proximo: true, diasParaEntrega: 2 },
+      alerta: 'proximo',
       fechaEntregaEstimada: '2026-11-15',
       diasEstimadoEntrega: 15,
     });
-    expect(o.etapasVisitadas).toEqual([1, 2]);
+  });
+
+  it('una orden entregada no va al tablero y conserva sus etapas visitadas', async () => {
+    rutasGet({
+      '/orden/17': ordenDto({ estado: 'CERRADA', idEtapaActual: 9, etapasVisitadas: [1, 9], alerta: 'NORMAL' }),
+    });
+
+    const o = await ordenService.getOrden(17);
+
+    expect(o).toMatchObject({ estado: 'ENTREGADA', columna: null, etapasVisitadas: [1, 9], alerta: 'normal' });
   });
 });
 
 describe('acciones de la ficha (devuelven la orden completa)', () => {
   beforeEach(() => {
-    http.patch.mockResolvedValue(ordenDto()); // respuesta del PATCH, sin etapasVisitadas
-    rutasGet({
-      '/orden/17': ordenDto({ idEtapaActual: 6 }),
-      '/orden/17/etapas': [hist(1, '2026-10-31T08:00:00'), hist(6, '2026-10-31T09:00:00')],
-    });
+    // La respuesta del PATCH ya trae los campos calculados
+    http.patch.mockResolvedValue(ordenDto({ idEtapaActual: 6, etapasVisitadas: [1, 6] }));
   });
 
   it('cambiarEtapa manda el body que espera CambioEtapaRequestDto', async () => {
@@ -131,6 +164,7 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
       visibleCliente: true,
     });
     expect(o.etapasVisitadas).toEqual([1, 6]);
+    expect(http.get).not.toHaveBeenCalled(); // ya no recarga la orden
   });
 
   it('marcarIngresoCotizar manda la fecha local de hoy', async () => {
@@ -157,10 +191,15 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
   });
 
   it('entregarOrden manda el body que espera EntregaRequestDto', async () => {
-    rutasGet({
-      '/orden/17': ordenDto({ idEtapaActual: 9, estado: 'CERRADA', fechaDeEntregaReal: '2026-10-31', ubicacionActual: 'FUERA_DE_TALLER' }),
-      '/orden/17/etapas': [hist(1, '2026-10-31T08:00:00'), hist(9, '2026-10-31T09:00:00')],
-    });
+    http.patch.mockResolvedValue(
+      ordenDto({
+        idEtapaActual: 9,
+        estado: 'CERRADA',
+        fechaDeEntregaReal: '2026-10-31',
+        ubicacionActual: 'FUERA_DE_TALLER',
+        etapasVisitadas: [1, 9],
+      })
+    );
 
     const o = await ordenService.entregarOrden({ idOrden: 17, nota: 'Entregado sin novedad', notificar: false });
 
@@ -178,22 +217,26 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
 });
 
 describe('getOrdenesKanban', () => {
-  it('deja solo las órdenes con ingreso al taller y calcula columna, días y etapas visitadas', async () => {
+  it('hace una sola petición y deja solo las órdenes con ingreso al taller', async () => {
     rutasGet({
       '/orden': [
-        ordenDto({ idOrdenReparacion: 1, fechaIngresoReparacion: null, fechaDeEntregaEstimada: null }), // solo cotización
-        ordenDto({ idOrdenReparacion: 2, fechaIngresoReparacion: '2026-10-29', fechaDeEntregaEstimada: null }), // Asignado
-        ordenDto({ idOrdenReparacion: 17, idEtapaActual: 2, nombreEtapaActual: 'Latonería' }),
-      ],
-      '/orden/2/etapas': [],
-      '/orden/17/etapas': [
-        hist(1, '2026-10-30T08:00:00', { fechaFin: '2026-10-31T08:00:00', tecnico: PEDRO }),
-        hist(2, '2026-10-31T08:00:00', { tecnico: { id: 16, nombre: 'Luis Latonero' } }),
+        ordenDto({ idOrdenReparacion: 1, fechaIngresoReparacion: null, fechaDeEntregaEstimada: null, diasEnEtapa: null }), // solo cotización
+        ordenDto({ idOrdenReparacion: 2, fechaIngresoReparacion: '2026-10-29', fechaDeEntregaEstimada: null, diasEnEtapa: 2 }), // Asignado
+        ordenDto({
+          idOrdenReparacion: 17,
+          idEtapaActual: 2,
+          nombreEtapaActual: 'Latonería',
+          idTecnicoActual: 16,
+          nombreTecnicoActual: 'Luis Latonero',
+          etapasVisitadas: [1, 2],
+          diasEnEtapa: 0,
+        }),
       ],
     });
 
     const tablero = await ordenService.getOrdenesKanban();
 
+    expect(http.get).toHaveBeenCalledTimes(1);
     expect(http.get).toHaveBeenCalledWith('/orden');
     expect(tablero.map((o) => o.id)).toEqual([2, 17]);
 
@@ -206,31 +249,21 @@ describe('getOrdenesKanban', () => {
       etapasVisitadas: [1, 2],
       diasEnEtapa: 0,
       alerta: 'normal',
-      tecnicoActual: { id: 16, nombre: 'Luis Latonero' }, // el de la etapa abierta, no el de Desarme
+      tecnicoActual: { id: 16, nombre: 'Luis Latonero' },
     });
   });
 
-  it('marca vencida la orden que pasó su fecha estimada de entrega', async () => {
+  it('usa la alerta que calcula el backend (en minúsculas)', async () => {
     rutasGet({
-      '/orden': [ordenDto({ idEtapaActual: 2, fechaIngresoReparacion: '2026-10-01', fechaDeEntregaEstimada: '2026-10-20' })],
-      '/orden/17/etapas': [hist(2, '2026-10-30T08:00:00')],
+      '/orden': [
+        ordenDto({ idOrdenReparacion: 1, idEtapaActual: 2, alerta: 'VENCIDO' }),
+        ordenDto({ idOrdenReparacion: 2, idEtapaActual: 1, alerta: 'CRITICO' }),
+        ordenDto({ idOrdenReparacion: 3, idEtapaActual: 5, alerta: 'PROXIMO' }),
+      ],
     });
 
-    const [o] = await ordenService.getOrdenesKanban();
+    const tablero = await ordenService.getOrdenesKanban();
 
-    expect(o.alerta).toBe('vencido');
-  });
-
-  it('marca crítica la orden que supera los días límite de su etapa', async () => {
-    // Desarme (id 1) tiene diasLimiteCritico = 2
-    rutasGet({
-      '/orden': [ordenDto({ idEtapaActual: 1, fechaDeEntregaEstimada: '2026-12-31' })],
-      '/orden/17/etapas': [hist(1, '2026-10-25T08:00:00')],
-    });
-
-    const [o] = await ordenService.getOrdenesKanban();
-
-    expect(o.diasEnEtapa).toBe(6);
-    expect(o.alerta).toBe('critico');
+    expect(tablero.map((o) => o.alerta)).toEqual(['vencido', 'critico', 'proximo']);
   });
 });
