@@ -3,7 +3,6 @@ import * as mock from './mock/mockApi';
 import { getSessionUser } from './session';
 
 // Adapta ObservacionResponseDto del backend a lo que usa TabObservaciones.
-// El backend todavía no guarda fotos (solo devuelve cantidadImagenes).
 const observacionDesdeBackend = (o) => ({
   id: o.idObservacion,
   idOrden: o.idOrdenReparacion,
@@ -13,7 +12,7 @@ const observacionDesdeBackend = (o) => ({
   fecha: o.createAt,
   texto: o.nota,
   visibleCliente: o.visibleCliente,
-  imagenes: [],
+  imagenes: (o.imagenes || []).map((i) => ({ id: i.id, url: i.url, nombre: i.nombre || '' })),
 });
 
 // [{ id, idOrden, idEtapa, etapa, autor, fecha, texto, visibleCliente, imagenes:[{id,url,nombre}] }]
@@ -34,6 +33,18 @@ export const crearObservacion = (data) =>
           visibleCliente: data.notificar,
         })
         .then(observacionDesdeBackend);
+
+// Sube fotos nuevas (multipart) a una observación ya creada y devuelve las imágenes guardadas.
+export async function subirImagenes(idObservacion, archivos) {
+  const form = new FormData();
+  archivos.forEach((archivo) => form.append('archivos', archivo));
+  const imagenes = await http.post(`/observacion/${idObservacion}/imagenes`, form);
+  return imagenes.map((i) => ({ id: i.id, url: i.url, nombre: i.nombre || '' }));
+}
+
+// La descarga exige token, por eso se pide como blob y se previsualiza con un object URL.
+export const getImagenBlob = (idImagen) =>
+  http.get(`/observacion/imagenes/${idImagen}`, { responseType: 'blob' });
 
 // Galería consolidada de solo lectura:
 // [{ id, url, nombre, origen ('Valoración' | nombre de etapa), fecha }]
