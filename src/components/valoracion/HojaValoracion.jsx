@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Mono } from '../ui';
 import * as valoracionService from '../../services/valoracionService';
-import { ACCION_PIEZA, FILTROS_VALORACION, GRAVEDADES, accionLlevaGravedad } from '../../utils/constants';
+import { ACCION_PIEZA, CANTIDAD_MAX, FILTROS_VALORACION, GRAVEDADES, accionLlevaGravedad, cantidadValida } from '../../utils/constants';
 import { fmtOrden, fmtPlaca } from '../../utils/format';
 import { agruparBloques, estadoValoracionTag } from '../../utils/valoracionExport';
 import '../../styles/Valoracion.css';
@@ -10,17 +10,24 @@ const ACCIONES = [ACCION_PIEZA.REPARAR, ACCION_PIEZA.SUSTITUIR, ACCION_PIEZA.PIN
 
 let idSeq = 0;
 const idLocal = (prefijo) => `${prefijo}-${Date.now()}-${idSeq++}`;
-
 // Crear/editar la hoja de valoración de una orden (HU-28). Guardado único: al confirmar
 // se envía descripción + piezas + fotos y el backend genera el registro de valoración.
 export default function HojaValoracion({ orden, valoracion, onSaved, onCancel }) {
   const [descripcion, setDescripcion] = useState((valoracion && valoracion.descripcion) || '');
   const [piezas, setPiezas] = useState(() =>
-    ((valoracion && valoracion.detalles) || []).map((d) => ({ id: idLocal('p'), pieza: d.pieza, accion: d.accion, gravedad: d.gravedad || null }))
+    ((valoracion && valoracion.detalles) || []).map((d) => ({
+      id: idLocal('p'),
+      pieza: d.pieza,
+      accion: d.accion,
+      gravedad: d.gravedad || null,
+      cantidad: d.cantidad ?? 1,
+      observacion: d.observacion ?? null, // sin campo en pantalla, pero el PUT reemplaza la hoja: se conserva
+    }))
   );
   const [fotos, setFotos] = useState([]);
   const [fotosEliminadas, setFotosEliminadas] = useState([]);
   const [piezaNombre, setPiezaNombre] = useState('');
+  const [piezaCantidad, setPiezaCantidad] = useState('1');
   const [piezaAccion, setPiezaAccion] = useState(ACCION_PIEZA.REPARAR);
   const [piezaGravedad, setPiezaGravedad] = useState(GRAVEDADES[0]);
   const [guardando, setGuardando] = useState(false);
@@ -64,20 +71,34 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
   );
 
   const bloques = useMemo(() => agruparBloques(piezas), [piezas]);
-  const puedeGuardar = piezas.length > 0 && !guardando;
+  const cantidadesValidas = piezas.every((p) => cantidadValida(p.cantidad) !== null);
+  const puedeGuardar = piezas.length > 0 && cantidadesValidas && !guardando;
+  const puedeAgregar = piezaNombre.trim() !== '' && cantidadValida(piezaCantidad) !== null;
 
   const estadoActual = !valoracion ? FILTROS_VALORACION.SIN_VALORAR : valoracion.cargadaCesvi ? FILTROS_VALORACION.CARGADAS : FILTROS_VALORACION.SIN_CARGAR;
   const tag = estadoValoracionTag(estadoActual);
 
   const agregarPieza = () => {
     const nombre = piezaNombre.trim();
-    if (!nombre) return;
+    const cantidad = cantidadValida(piezaCantidad);
+    if (!nombre || cantidad === null) return;
     setPiezas((prev) => [
       ...prev,
-      { id: idLocal('p'), pieza: nombre, accion: piezaAccion, gravedad: accionLlevaGravedad(piezaAccion) ? piezaGravedad : null },
+      {
+        id: idLocal('p'),
+        pieza: nombre,
+        accion: piezaAccion,
+        gravedad: accionLlevaGravedad(piezaAccion) ? piezaGravedad : null,
+        cantidad,
+        observacion: null,
+      },
     ]);
     setPiezaNombre('');
+    setPiezaCantidad('1');
   };
+
+  // Mientras se escribe se guarda el texto tal cual; se valida al guardar (y deshabilita el botón)
+  const cambiarCantidad = (id, valor) => setPiezas((prev) => prev.map((p) => (p.id === id ? { ...p, cantidad: valor } : p)));
 
   const onNombreKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -117,7 +138,13 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
     try {
       const payload = {
         descripcion: descripcion.trim(),
-        detalles: piezas.map((p) => ({ pieza: p.pieza, accion: p.accion, gravedad: accionLlevaGravedad(p.accion) ? p.gravedad : null })),
+        detalles: piezas.map((p) => ({
+          pieza: p.pieza,
+          accion: p.accion,
+          gravedad: accionLlevaGravedad(p.accion) ? p.gravedad : null,
+          cantidad: cantidadValida(p.cantidad),
+          observacion: p.observacion ?? null,
+        })),
       };
       const nuevas = fotos.filter((f) => f.file);
       const guardada = await valoracionService.guardarValoracion(orden.id, payload, !valoracion);
@@ -184,15 +211,32 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
             <div className="grc-panel-title" style={{ fontSize: 15 }}>
               Agregar pieza
             </div>
-            <div style={{ marginTop: 13 }}>
-              <label htmlFor="hoja-pieza-nombre">NOMBRE DE LA PIEZA</label>
-              <input
-                id="hoja-pieza-nombre"
-                value={piezaNombre}
-                onChange={(e) => setPiezaNombre(e.target.value)}
-                onKeyDown={onNombreKeyDown}
-                placeholder="Guardabarros delantero izquierdo"
-              />
+            <div className="hoja-pieza-campos">
+              <div>
+                <label htmlFor="hoja-pieza-nombre">NOMBRE DE LA PIEZA</label>
+                <input
+                  id="hoja-pieza-nombre"
+                  value={piezaNombre}
+                  onChange={(e) => setPiezaNombre(e.target.value)}
+                  onKeyDown={onNombreKeyDown}
+                  placeholder="Guardabarros delantero izquierdo"
+                />
+              </div>
+              <div>
+                <label htmlFor="hoja-pieza-cantidad">CANTIDAD</label>
+                <input
+                  id="hoja-pieza-cantidad"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={CANTIDAD_MAX}
+                  step={1}
+                  value={piezaCantidad}
+                  onChange={(e) => setPiezaCantidad(e.target.value)}
+                  onKeyDown={onNombreKeyDown}
+                  aria-invalid={cantidadValida(piezaCantidad) === null}
+                />
+              </div>
             </div>
             <div className="hoja-segmento" role="group" aria-label="Acción sobre la pieza">
               {ACCIONES.map((a) => (
@@ -219,7 +263,7 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
                 </select>
               </div>
             )}
-            <Button block style={{ marginTop: 14 }} onClick={agregarPieza} disabled={!piezaNombre.trim()}>
+            <Button block style={{ marginTop: 14 }} onClick={agregarPieza} disabled={!puedeAgregar}>
               AGREGAR A LA HOJA
             </Button>
           </Card>
@@ -244,13 +288,27 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
                         {p.gravedad ? `GRAVEDAD ${p.gravedad}` : 'SIN GRAVEDAD'}
                       </Mono>
                     </div>
-                    <button type="button" className="hoja-pieza-del" aria-label={`Quitar ${p.pieza}`} onClick={() => eliminarPieza(p.id)}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M3 6h18" />
-                        <path d="M8 6V4h8v2" />
-                        <path d="M19 6l-1 14H6L5 6" />
-                      </svg>
-                    </button>
+                    <div className="hoja-pieza-acciones">
+                      <input
+                        type="number"
+                        className="hoja-pieza-cant"
+                        inputMode="numeric"
+                        min={1}
+                        max={CANTIDAD_MAX}
+                        step={1}
+                        value={p.cantidad}
+                        onChange={(e) => cambiarCantidad(p.id, e.target.value)}
+                        aria-label={`Cantidad de ${p.pieza}`}
+                        aria-invalid={cantidadValida(p.cantidad) === null}
+                      />
+                      <button type="button" className="hoja-pieza-del" aria-label={`Quitar ${p.pieza}`} onClick={() => eliminarPieza(p.id)}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))}
                 {!b.items.length && <div className="hoja-bloque-vacio">{b.vacio}</div>}
@@ -323,7 +381,9 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
             <div className="hoja-guardar-nota">
               {piezas.length === 0
                 ? 'Agrega al menos una pieza para poder guardar la hoja.'
-                : 'Al guardar se genera el PDF de la hoja y el ZIP de fotografías.'}
+                : !cantidadesValidas
+                  ? `Revisa las cantidades: deben ser números enteros entre 1 y ${CANTIDAD_MAX}.`
+                  : 'Al guardar se genera el PDF de la hoja y el ZIP de fotografías.'}
             </div>
           </Card>
         </div>

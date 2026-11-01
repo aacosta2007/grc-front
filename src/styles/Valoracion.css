@@ -142,6 +142,11 @@
   padding: 11px 16px;
   border-bottom: 1px solid var(--line-soft);
 }
+.hoja-pieza-campos { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 10px; margin-top: 13px; }
+.hoja-pieza-acciones { display: flex; align-items: center; gap: 8px; flex: none; }
+.hoja-pieza-cant { width: 64px; padding: 5px 6px; text-align: center; }
+.hoja-pieza-campos input[aria-invalid='true'],
+.hoja-pieza-cant[aria-invalid='true'] { border-color: var(--red); }
 .hoja-pieza-del {
   background: transparent;
   border: 1px solid var(--line);
