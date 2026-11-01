@@ -1,16 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as observacionService from '../../services/observacionService';
 import { Alert, Button, Spinner, Empty } from '../ui';
 import { fmtFechaHora } from '../../utils/format';
 import { getEtapa } from '../../utils/constants';
 
-const leerComoDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// Imagen de una observación ya guardada: se descarga con token y se muestra con object URL.
+function ImagenAdjunta({ imagen }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    let activo = true;
+    let objectUrl;
+    observacionService
+      .getImagenBlob(imagen.id)
+      .then((blob) => {
+        if (!activo) return;
+        objectUrl = URL.createObjectURL(blob);
+        setUrl(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      activo = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [imagen.id]);
+  if (!url) return null;
+  return <img src={url} alt={imagen.nombre || 'Foto adjunta'} className="ficha-obs-thumb" />;
+}
 
 // HU-25 · Timeline de observaciones de la orden + formulario para registrar una nueva.
 export default function TabObservaciones({ orden }) {
@@ -26,6 +41,7 @@ export default function TabObservaciones({ orden }) {
   const [idEtapa, setIdEtapa] = useState(etapasOpciones[0] ? String(etapasOpciones[0].id) : '');
   const [texto, setTexto] = useState('');
   const [imagenes, setImagenes] = useState([]);
+  const urlsRef = useRef(new Set());
   const [notificar, setNotificar] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState('');
@@ -47,19 +63,34 @@ export default function TabObservaciones({ orden }) {
     cargar();
   }, [cargar]);
 
+  useEffect(
+    () => () => {
+      urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+      urlsRef.current.clear();
+    },
+    []
+  );
+
   const hayEtapas = etapasOpciones.length > 0;
 
-  const agregarImagenes = async (e) => {
+  const agregarImagenes = (e) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     if (files.length === 0) return;
-    const nuevas = await Promise.all(
-      files.map(async (file) => ({ url: await leerComoDataUrl(file), nombre: file.name }))
-    );
+    const nuevas = files.map((file) => {
+      const url = URL.createObjectURL(file);
+      urlsRef.current.add(url);
+      return { key: `${file.name}-${Date.now()}-${Math.random()}`, file, url, nombre: file.name };
+    });
     setImagenes((prev) => [...prev, ...nuevas]);
   };
 
   const quitarImagen = (idx) => {
+    const img = imagenes[idx];
+    if (img && img.file && img.url) {
+      URL.revokeObjectURL(img.url);
+      urlsRef.current.delete(img.url);
+    }
     setImagenes((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -73,12 +104,21 @@ export default function TabObservaciones({ orden }) {
     setGuardando(true);
     setErrorForm('');
     try {
-      await observacionService.crearObservacion({
+      const creada = await observacionService.crearObservacion({
         idOrden: orden.id,
         idEtapa: Number(idEtapa),
         texto: texto.trim(),
-        imagenes,
         notificar,
+      });
+      const nuevas = imagenes.filter((img) => img.file);
+      if (nuevas.length) {
+        await observacionService.subirImagenes(creada.id, nuevas.map((img) => img.file));
+      }
+      imagenes.forEach((img) => {
+        if (img.file && img.url) {
+          URL.revokeObjectURL(img.url);
+          urlsRef.current.delete(img.url);
+        }
       });
       setTexto('');
       setImagenes([]);
@@ -114,7 +154,7 @@ export default function TabObservaciones({ orden }) {
                 <div className="ficha-obs-fotos">
                   <div className="ficha-obs-thumbs">
                     {o.imagenes.map((img) => (
-                      <img key={img.id || img.url} src={img.url} alt={img.nombre || 'Foto adjunta'} className="ficha-obs-thumb" />
+                      <ImagenAdjunta key={img.id} imagen={img} />
                     ))}
                   </div>
                   <span className="grc-mono grc-muted">
@@ -170,7 +210,7 @@ export default function TabObservaciones({ orden }) {
         {imagenes.length > 0 && (
           <div className="ficha-preview-grid">
             {imagenes.map((img, idx) => (
-              <div key={img.url + idx} className="ficha-preview-item">
+              <div key={img.key} className="ficha-preview-item">
                 <img src={img.url} alt={img.nombre} />
                 <button type="button" className="ficha-preview-remove" aria-label={`Quitar ${img.nombre}`} onClick={() => quitarImagen(idx)}>
                   ×
