@@ -9,6 +9,31 @@ const IconFoto = () => (
   </svg>
 );
 
+// Las fotos del backend exigen token: se descargan como blob y se muestran con object URL.
+// En modo mock llegan como data-URL (sin tipo), así que se usan directamente.
+function FotoImagen({ foto, className, alt, fallback = null }) {
+  const [src, setSrc] = useState(foto.tipo ? '' : foto.url || '');
+  useEffect(() => {
+    if (!foto.tipo) return undefined;
+    let activo = true;
+    let objectUrl;
+    observacionService
+      .getFotoBlob(foto.tipo, foto.id)
+      .then((blob) => {
+        if (!activo) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      activo = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [foto.tipo, foto.id]);
+  if (!src) return fallback;
+  return <img src={src} alt={alt} className={className} />;
+}
+
 // HU-26 · Galería consolidada de solo lectura (valoración + observaciones por etapa).
 export default function TabFotografias({ orden }) {
   const [fotos, setFotos] = useState([]);
@@ -53,9 +78,9 @@ export default function TabFotografias({ orden }) {
         {fotos.map((f, idx) => {
           const esValoracion = f.origen === 'Valoración';
           return (
-            <button key={f.id} type="button" className="ficha-foto-item" onClick={() => setVisorIdx(idx)}>
+            <button key={`${f.tipo || 'mock'}-${f.id}`} type="button" className="ficha-foto-item" onClick={() => setVisorIdx(idx)}>
               <span className="ficha-foto-thumb" aria-hidden="true">
-                {f.url ? <img src={f.url} alt={f.nombre || 'Fotografía de la orden'} /> : <IconFoto />}
+                <FotoImagen foto={f} alt={f.nombre || 'Fotografía de la orden'} fallback={<IconFoto />} />
               </span>
               <span className="ficha-foto-pie">
                 <span className="grc-mono">{f.nombre || `FOTO ${String(idx + 1).padStart(2, '0')}`}</span>
@@ -74,7 +99,7 @@ export default function TabFotografias({ orden }) {
             <div id="ficha-visor-titulo" className="grc-visually-hidden">
               {foto.nombre || 'Fotografía de la orden'}
             </div>
-            <img src={foto.url} alt={foto.nombre || 'Fotografía de la orden'} className="ficha-visor-img" />
+            <FotoImagen foto={foto} alt={foto.nombre || 'Fotografía de la orden'} className="ficha-visor-img" fallback={<IconFoto />} />
             <div className="ficha-visor-controles">
               <button type="button" className="grc-btn grc-btn-outline" aria-label="Foto anterior" onClick={irAnterior}>
                 ← ANTERIOR
