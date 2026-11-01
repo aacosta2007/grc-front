@@ -6,9 +6,15 @@ import { COLUMNA_ASIGNADO, ESTADO_ORDEN, ETAPA_ENTREGADO_ID, getEtapa } from '..
 // Todas las funciones de órdenes devuelven la "vista de orden" enriquecida
 // (ver src/services/README.md).
 
+// Entregada = tiene fecha de entrega real. La entrega deja la orden ACTIVA (para buscarla por
+// placa y verla en el tablero); las entregadas antes de ese cambio quedaron CERRADA.
+const estaEntregada = (o) => !!o.fechaDeEntregaReal || o.estado === 'CERRADA';
+
 // Columna del tablero: solo las órdenes activas con ingreso al taller están en él.
+// Las entregadas van a "Entregado" (la etapa actual no cambia al entregar).
 const columnaDe = (o) => {
   if (o.estado !== 'ACTIVA' || !o.fechaIngresoReparacion) return null;
+  if (o.fechaDeEntregaReal) return getEtapa(ETAPA_ENTREGADO_ID)?.nombre ?? 'Entregado';
   return o.idEtapaActual ? getEtapa(o.idEtapaActual)?.nombre ?? o.nombreEtapaActual : COLUMNA_ASIGNADO.nombre;
 };
 
@@ -24,7 +30,7 @@ export const ordenDesdeBackend = (o) => {
     vehiculo: { id: v.idVehiculo, marca: v.marca, modelo: v.modelo, anio: v.anio, color: v.color, vin: v.vin },
     vehiculoTexto: [`${v.marca || ''} ${v.modelo || ''}`.trim(), v.anio].filter(Boolean).join(' · '),
     cliente: { id: c.idPersona, nombre: c.nombreCompleto, documento: c.documento, celular: c.celular, correo: c.correo },
-    estado: o.estado === 'CERRADA' ? ESTADO_ORDEN.ENTREGADA : o.estado, // el backend la llama CERRADA
+    estado: estaEntregada(o) ? ESTADO_ORDEN.ENTREGADA : o.estado,
     ubicacionActual: o.ubicacionActual,
     idEtapaActual: o.idEtapaActual,
     etapaActual: o.nombreEtapaActual,
@@ -61,17 +67,21 @@ export const getOrden = async (idOrden) => {
   return ordenDesdeBackend(await http.get(`/orden/${idOrden}`));
 };
 
-// Orden más reciente (activa si existe) de una placa, o null.
-// El backend devuelve todas las órdenes de la placa (lista vacía si no hay).
+// Orden de una placa, o null: primero la activa sin entregar, luego la activa entregada.
+// El backend devuelve todas las órdenes de la placa (lista vacía si no hay); un vehículo
+// puede tener varias órdenes activas.
 export const buscarOrdenPorPlaca = async (placa) => {
   if (USE_MOCK) return mock.buscarOrdenPorPlaca(placa);
   const ordenes = await http.get(`/orden/placa/${encodeURIComponent(placa)}`);
   if (!ordenes.length) return null;
-  const elegida = ordenes.find((o) => o.estado === 'ACTIVA') || ordenes[0];
+  const elegida =
+    ordenes.find((o) => o.estado === 'ACTIVA' && !o.fechaDeEntregaReal) ||
+    ordenes.find((o) => o.estado === 'ACTIVA') ||
+    ordenes[0];
   return ordenDesdeBackend(elegida);
 };
 
-// Tablero: órdenes activas con ingreso al taller (columna "Asignado" o la de su etapa).
+// Tablero: órdenes activas con ingreso al taller (columna "Asignado", la de su etapa o "Entregado").
 // Una sola petición: técnico, días y alertas ya vienen calculados en cada orden.
 export const getOrdenesKanban = async () => {
   if (USE_MOCK) return mock.getOrdenesKanban();
@@ -121,8 +131,8 @@ export const marcarIngresoReparacion = (idOrden) =>
 export const marcarDiasEstimados = (idOrden, dias) =>
   USE_MOCK ? mock.marcarDiasEstimados(idOrden, dias) : patchYRecargar(idOrden, 'dias-estimados', { dias });
 
-// { idOrden, nota, notificar } · cierra la orden (CERRADA), marca la fecha de entrega real y la
-// deja fuera del taller. La nota, si viene, queda como observación de "Entrega".
+// { idOrden, nota, notificar } · marca la fecha de entrega real y la deja fuera del taller.
+// La orden sigue ACTIVA (pasa a la columna "Entregado"). La nota, si viene, queda como observación de "Entrega".
 export const entregarOrden = (data) =>
   USE_MOCK
     ? mock.cambiarEtapa({ ...data, idEtapa: ETAPA_ENTREGADO_ID, idTecnico: null }, getSessionUser())
