@@ -46,7 +46,22 @@ export async function subirImagenes(idObservacion, archivos) {
 export const getImagenBlob = (idImagen) =>
   http.get(`/observacion/imagenes/${idImagen}`, { responseType: 'blob' });
 
+// Descarga una foto de la galería según su origen (valoración u observación).
+export const getFotoBlob = (tipo, id) =>
+  http.get(`${tipo === 'valoracion' ? '/valoracion' : '/observacion'}/imagenes/${id}`, { responseType: 'blob' });
+
 // Galería consolidada de solo lectura:
-// [{ id, url, nombre, origen ('Valoración' | nombre de etapa), fecha }]
+// [{ id, tipo ('valoracion'|'observacion'), url, nombre, origen ('Valoración' | nombre de etapa), fecha }]
 export const getFotosOrden = (idOrden) =>
-  USE_MOCK ? mock.getFotosOrden(idOrden) : http.get(`/ordenes/${idOrden}/fotos`);
+  USE_MOCK
+    ? mock.getFotosOrden(idOrden)
+    : http.get(`/orden/${idOrden}/fotos`).then((lista) =>
+        lista.map((f) => ({
+          id: f.id,
+          tipo: f.tipo,
+          url: f.url,
+          nombre: f.nombre || '',
+          origen: f.origen,
+          fecha: f.fecha,
+        }))
+      );
