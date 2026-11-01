@@ -6,7 +6,6 @@ export const USE_MOCK = import.meta.env.REACT_APP_USE_MOCK !== 'false';
 
 const http = axios.create({
   baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:8080/api',
-  headers: { 'Content-Type': 'application/json' },
 });
 
 http.interceptors.request.use((config) => {

@@ -26,7 +26,11 @@ const desdeBackend = (v) => ({
     cantidad: d.cantidad,
     observacion: d.observacion,
   })),
-  imagenes: [],
+  imagenes: (v.imagenes || []).map((i) => ({
+    id: i.id,
+    url: i.url,
+    nombre: i.descripcion || '',
+  })),
   cargadaCesvi: v.cargadaCesvi,
   cargadaCesviAt: v.cargadaCesviAt,
   usuario: v.autor,
@@ -80,3 +84,17 @@ export async function guardarValoracion(idOrden, data, esNueva) {
 
 export const marcarCargadaCesvi = (idOrden) =>
   http.patch(`/orden/${idOrden}/valoracion/cesvi`).then(desdeBackend);
+
+// Sube fotos nuevas (multipart) a una valoración ya creada y devuelve las imágenes guardadas.
+export async function subirImagenes(idValoracion, archivos) {
+  const form = new FormData();
+  archivos.forEach((archivo) => form.append('archivos', archivo));
+  const imagenes = await http.post(`/valoracion/${idValoracion}/imagenes`, form);
+  return imagenes.map((i) => ({ id: i.id, url: i.url, nombre: i.descripcion || '' }));
+}
+
+export const eliminarImagen = (idImagen) => http.delete(`/valoracion/imagenes/${idImagen}`);
+
+// La descarga exige token, por eso se pide como blob y se previsualiza con un object URL.
+export const getImagenBlob = (idImagen) =>
+  http.get(`/valoracion/imagenes/${idImagen}`, { responseType: 'blob' });
