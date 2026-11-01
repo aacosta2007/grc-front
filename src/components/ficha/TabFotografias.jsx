@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as observacionService from '../../services/observacionService';
 import { Alert, Spinner, Empty, Modal } from '../ui';
+import { fmtFecha } from '../../utils/format';
 
 const IconFoto = () => (
   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -80,12 +81,15 @@ export default function TabFotografias({ orden }) {
           return (
             <button key={`${f.tipo || 'mock'}-${f.id}`} type="button" className="ficha-foto-item" onClick={() => setVisorIdx(idx)}>
               <span className="ficha-foto-thumb" aria-hidden="true">
-                <FotoImagen foto={f} alt={f.nombre || 'Fotografía de la orden'} fallback={<IconFoto />} />
+                <FotoImagen foto={f} alt="Fotografía de la orden" fallback={<IconFoto />} />
               </span>
               <span className="ficha-foto-pie">
-                <span className="grc-mono">{f.nombre || `FOTO ${String(idx + 1).padStart(2, '0')}`}</span>
-                <span className="grc-mono" style={{ color: esValoracion ? 'var(--accent)' : 'var(--sub)' }}>
-                  {esValoracion ? 'VALORACIÓN' : f.origen}
+                <span className="ficha-foto-label">AGREGADO</span>
+                <span className="grc-mono">{fmtFecha(f.fecha)}</span>
+                <span className="ficha-foto-autor">{f.autor}</span>
+                <span className="grc-mono ficha-foto-rol">{f.rol}</span>
+                <span className="ficha-foto-origen">
+                  {esValoracion ? 'Valoración' : f.origen}
                 </span>
               </span>
             </button>
@@ -97,9 +101,9 @@ export default function TabFotografias({ orden }) {
         {foto && (
           <div className="ficha-visor">
             <div id="ficha-visor-titulo" className="grc-visually-hidden">
-              {foto.nombre || 'Fotografía de la orden'}
+              Fotografía de la orden
             </div>
-            <FotoImagen foto={foto} alt={foto.nombre || 'Fotografía de la orden'} className="ficha-visor-img" fallback={<IconFoto />} />
+            <FotoImagen foto={foto} alt="Fotografía de la orden" className="ficha-visor-img" fallback={<IconFoto />} />
             <div className="ficha-visor-controles">
               <button type="button" className="grc-btn grc-btn-outline" aria-label="Foto anterior" onClick={irAnterior}>
                 ← ANTERIOR
