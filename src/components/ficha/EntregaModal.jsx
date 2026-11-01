@@ -3,7 +3,8 @@ import { Modal, Field, Alert, Button } from '../ui';
 import * as ordenService from '../../services/ordenService';
 import '../../styles/StageChangeModal.css';
 
-// Entrega del vehículo: cierra la orden y registra la fecha de entrega real (una sola vez).
+// Entrega del vehículo: registra la fecha de entrega real (una sola vez). La orden sigue activa
+// (columna "Entregado") pero ya no admite cambios de etapa ni de fechas.
 export default function EntregaModal({ orden, onClose, onSaved }) {
   const [nota, setNota] = useState('');
   const [notificar, setNotificar] = useState(true);
@@ -27,7 +28,7 @@ export default function EntregaModal({ orden, onClose, onSaved }) {
       open
       onClose={guardando ? undefined : onClose}
       title={`${orden.placa} → Entregado`}
-      subtitle={`Desde ${orden.etapaActual || 'Asignado'} · la orden se cierra y no podrá editarse.`}
+      subtitle={`Desde ${orden.etapaActual || 'Asignado'} · la orden pasa a Entregado y no podrá editarse.`}
       labelledBy="entrega-title"
       width={430}
     >

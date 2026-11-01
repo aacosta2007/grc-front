@@ -2,15 +2,23 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Spinner } from '../components/ui';
 import StageChangeModal from '../components/StageChangeModal';
+import EntregaModal from '../components/ficha/EntregaModal';
 import * as ordenService from '../services/ordenService';
-import { ETAPAS_REPARACION, ETAPA_BANCADA_ID, COLUMNA_ASIGNADO, getEtapa } from '../utils/constants';
-import { fmtOrden, pluralDias } from '../utils/format';
+import { ETAPAS_REPARACION, ETAPA_BANCADA_ID, ETAPA_ENTREGADO_ID, COLUMNA_ASIGNADO, getEtapa } from '../utils/constants';
+import { fmtFechaCorta, fmtOrden, pluralDias } from '../utils/format';
 import '../styles/Backlog.css';
+
+// "Entregado" no es etapa: soltar ahí abre el modal de entrega (PATCH /orden/{id}/entregar-orden).
+const COLUMNA_ENTREGADO = { id: ETAPA_ENTREGADO_ID, nombre: getEtapa(ETAPA_ENTREGADO_ID).nombre, nota: 'SALE DEL TALLER' };
 
 const COLUMNAS_BASE = [
   { ...COLUMNA_ASIGNADO, nota: 'SIN TÉCNICO' },
   ...ETAPAS_REPARACION.map((e) => ({ id: e.id, nombre: e.nombre, nota: e.id === ETAPA_BANCADA_ID ? 'NO PIDE TÉCNICO' : '' })),
+  COLUMNA_ENTREGADO,
 ];
+
+// Destinos posibles al mover una tarjeta: todas las columnas menos "Asignado"
+const COLUMNAS_DESTINO = COLUMNAS_BASE.filter((col) => col.id !== null);
 
 const COLOR_ALERTA = {
   vencido: 'var(--red)',
@@ -31,8 +39,9 @@ function estaBloqueada(col, orden) {
 }
 
 function TarjetaOrden({ orden, arrastrando, onDragStart, onDragEnd, onOpen, menuAbierto, onToggleMenu, onElegirDestino, destinos }) {
-  const arrastrable = orden.columna !== 'Entregado';
-  const color = colorDe(orden.alerta);
+  const entregada = orden.columna === COLUMNA_ENTREGADO.nombre;
+  const arrastrable = !entregada;
+  const color = entregada ? colorDe('completado') : colorDe(orden.alerta);
 
   return (
     <div
@@ -51,9 +60,11 @@ function TarjetaOrden({ orden, arrastrando, onDragStart, onDragEnd, onOpen, menu
         <div className="backlog-card-cliente">{orden.cliente?.nombre}</div>
         <div className="backlog-card-footer">
           <span className="backlog-card-dias" style={{ color }}>
-            {pluralDias(orden.diasEnEtapa ?? 0)}
+            {entregada ? `ENTREGADO ${fmtFechaCorta(orden.fechaEntregaReal)}` : pluralDias(orden.diasEnEtapa ?? 0)}
           </span>
-          <span className="backlog-card-tecnico">{orden.tecnicoActual?.nombre || 'Sin técnico'}</span>
+          <span className="backlog-card-tecnico">
+            {entregada ? orden.etapaActual || 'Desde Asignado' : orden.tecnicoActual?.nombre || 'Sin técnico'}
+          </span>
         </div>
       </button>
 
@@ -99,7 +110,7 @@ export default function BacklogPage() {
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
   const [dragOrdenId, setDragOrdenId] = useState(null);
-  const [modal, setModal] = useState(null); // { orden, etapaDestino }
+  const [modal, setModal] = useState(null); // { orden, etapaDestino } | { orden, entrega: true }
   const [menuMoverId, setMenuMoverId] = useState(null);
 
   const cargar = useCallback(
@@ -137,9 +148,13 @@ export default function BacklogPage() {
   );
 
   const abrirModalPara = (orden, idEtapa) => {
+    setMenuMoverId(null);
+    if (idEtapa === ETAPA_ENTREGADO_ID) {
+      setModal({ orden, entrega: true });
+      return;
+    }
     const etapa = getEtapa(idEtapa);
     if (!etapa) return;
-    setMenuMoverId(null);
     setModal({ orden, etapaDestino: etapa });
   };
 
@@ -164,12 +179,12 @@ export default function BacklogPage() {
   };
 
   const onSavedModal = (ordenActualizada) => {
-    const etapaNombre = modal ? modal.etapaDestino.nombre : '';
+    const etapaNombre = modal ? (modal.entrega ? COLUMNA_ENTREGADO.nombre : modal.etapaDestino.nombre) : '';
     setModal(null);
     cargar().then(() => setAviso(`${ordenActualizada.placa} pasó a ${etapaNombre}`));
   };
 
-  const destinosValidos = (orden) => ETAPAS_REPARACION.filter((e) => !estaBloqueada({ id: e.id, nombre: e.nombre }, orden));
+  const destinosValidos = (orden) => COLUMNAS_DESTINO.filter((col) => !estaBloqueada(col, orden));
 
   if (cargando) return <Spinner label="CARGANDO TABLERO" />;
   if (error) return <Alert type="error">{error}</Alert>;
@@ -231,7 +246,11 @@ export default function BacklogPage() {
         })}
       </div>
 
-      {modal && (
+      {modal?.entrega && (
+        <EntregaModal orden={modal.orden} onClose={() => setModal(null)} onSaved={onSavedModal} />
+      )}
+
+      {modal && !modal.entrega && (
         <StageChangeModal
           orden={modal.orden}
           etapaDestino={modal.etapaDestino}

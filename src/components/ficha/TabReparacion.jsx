@@ -259,7 +259,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
                 </button>
               )}
             </div>
-            <div className="ficha-etapa-tecnico">Fecha de entrega · cierra la orden</div>
+            <div className="ficha-etapa-tecnico">Fecha de entrega · pasa a Entregado</div>
             <div className="ficha-etapa-pie">
               <span className="grc-mono" style={{ color: entregada ? 'var(--green)' : 'var(--line)' }}>
                 {entregada ? 'ENTREGADA' : 'PENDIENTE'}
