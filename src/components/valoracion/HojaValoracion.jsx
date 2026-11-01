@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Mono } from '../ui';
 import * as valoracionService from '../../services/valoracionService';
 import { ACCION_PIEZA, FILTROS_VALORACION, GRAVEDADES, accionLlevaGravedad } from '../../utils/constants';
@@ -11,15 +11,6 @@ const ACCIONES = [ACCION_PIEZA.REPARAR, ACCION_PIEZA.SUSTITUIR, ACCION_PIEZA.PIN
 let idSeq = 0;
 const idLocal = (prefijo) => `${prefijo}-${Date.now()}-${idSeq++}`;
 
-function leerComoDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 // Crear/editar la hoja de valoración de una orden (HU-28). Guardado único: al confirmar
 // se envía descripción + piezas + fotos y el backend genera el registro de valoración.
 export default function HojaValoracion({ orden, valoracion, onSaved, onCancel }) {
@@ -27,9 +18,8 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
   const [piezas, setPiezas] = useState(() =>
     ((valoracion && valoracion.detalles) || []).map((d) => ({ id: idLocal('p'), pieza: d.pieza, accion: d.accion, gravedad: d.gravedad || null }))
   );
-  const [fotos, setFotos] = useState(() =>
-    ((valoracion && valoracion.imagenes) || []).map((f) => ({ id: idLocal('f'), url: f.url, nombre: f.nombre }))
-  );
+  const [fotos, setFotos] = useState([]);
+  const [fotosEliminadas, setFotosEliminadas] = useState([]);
   const [piezaNombre, setPiezaNombre] = useState('');
   const [piezaAccion, setPiezaAccion] = useState(ACCION_PIEZA.REPARAR);
   const [piezaGravedad, setPiezaGravedad] = useState(GRAVEDADES[0]);
@@ -37,6 +27,41 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
   const [error, setError] = useState('');
   const camaraRef = useRef(null);
   const archivosRef = useRef(null);
+  const urlsNuevasRef = useRef(new Set());
+
+  useEffect(() => {
+    let activo = true;
+    const creadas = [];
+    const existentes = (valoracion && valoracion.imagenes) || [];
+    (async () => {
+      const iniciales = await Promise.all(
+        existentes.map(async (f) => {
+          try {
+            const blob = await valoracionService.getImagenBlob(f.id);
+            const url = URL.createObjectURL(blob);
+            creadas.push(url);
+            return { key: idLocal('f'), id: f.id, file: null, url, nombre: f.nombre || '' };
+          } catch {
+            return { key: idLocal('f'), id: f.id, file: null, url: '', nombre: f.nombre || '' };
+          }
+        })
+      );
+      if (activo) setFotos(iniciales);
+      else creadas.forEach((u) => URL.revokeObjectURL(u));
+    })();
+    return () => {
+      activo = false;
+      creadas.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [valoracion]);
+
+  useEffect(
+    () => () => {
+      urlsNuevasRef.current.forEach((u) => URL.revokeObjectURL(u));
+      urlsNuevasRef.current.clear();
+    },
+    []
+  );
 
   const bloques = useMemo(() => agruparBloques(piezas), [piezas]);
   const puedeGuardar = piezas.length > 0 && !guardando;
@@ -63,16 +88,27 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
 
   const eliminarPieza = (id) => setPiezas((prev) => prev.filter((p) => p.id !== id));
 
-  const agregarArchivos = async (fileList) => {
+  const agregarArchivos = (fileList) => {
     const archivos = Array.from(fileList || []);
     if (!archivos.length) return;
-    const nuevas = await Promise.all(
-      archivos.map(async (file) => ({ id: idLocal('f'), url: await leerComoDataUrl(file), nombre: file.name }))
-    );
+    const nuevas = archivos.map((file) => {
+      const url = URL.createObjectURL(file);
+      urlsNuevasRef.current.add(url);
+      return { key: idLocal('f'), id: null, file, url, nombre: file.name };
+    });
     setFotos((prev) => [...prev, ...nuevas]);
   };
 
-  const eliminarFoto = (id) => setFotos((prev) => prev.filter((f) => f.id !== id));
+  const eliminarFoto = (key) => {
+    const foto = fotos.find((f) => f.key === key);
+    if (!foto) return;
+    if (foto.id) setFotosEliminadas((ids) => [...ids, foto.id]);
+    if (foto.file && foto.url) {
+      URL.revokeObjectURL(foto.url);
+      urlsNuevasRef.current.delete(foto.url);
+    }
+    setFotos((prev) => prev.filter((f) => f.key !== key));
+  };
 
   const guardar = async () => {
     if (!puedeGuardar) return;
@@ -82,10 +118,17 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
       const payload = {
         descripcion: descripcion.trim(),
         detalles: piezas.map((p) => ({ pieza: p.pieza, accion: p.accion, gravedad: accionLlevaGravedad(p.accion) ? p.gravedad : null })),
-        imagenes: fotos.map((f) => ({ url: f.url, nombre: f.nombre })),
       };
-      const v = await valoracionService.guardarValoracion(orden.id, payload, !valoracion);
-      onSaved(v);
+      const nuevas = fotos.filter((f) => f.file);
+      const guardada = await valoracionService.guardarValoracion(orden.id, payload, !valoracion);
+      if (nuevas.length) {
+        await valoracionService.subirImagenes(guardada.id, nuevas.map((f) => f.file));
+      }
+      if (fotosEliminadas.length) {
+        await Promise.all(fotosEliminadas.map((idImagen) => valoracionService.eliminarImagen(idImagen)));
+      }
+      const actualizada = await valoracionService.getValoracion(orden.id);
+      onSaved(actualizada || guardada);
     } catch (e) {
       setError(e.message || 'No se pudo guardar la hoja de valoración.');
     } finally {
@@ -259,9 +302,9 @@ export default function HojaValoracion({ orden, valoracion, onSaved, onCancel })
             {fotos.length > 0 && (
               <div className="hoja-fotos-grid">
                 {fotos.map((f) => (
-                  <div className="hoja-foto-item" key={f.id}>
-                    <img src={f.url} alt={f.nombre || 'Fotografía de la valoración'} />
-                    <button type="button" className="hoja-foto-quitar" aria-label={`Quitar foto ${f.nombre || ''}`} onClick={() => eliminarFoto(f.id)}>
+                  <div className="hoja-foto-item" key={f.key}>
+                    {f.url ? <img src={f.url} alt={f.nombre || 'Fotografía de la valoración'} /> : null}
+                    <button type="button" className="hoja-foto-quitar" aria-label={`Quitar foto ${f.nombre || ''}`} onClick={() => eliminarFoto(f.key)}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                         <path d="M18 6 6 18" />
                         <path d="m6 6 12 12" />

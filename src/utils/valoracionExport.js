@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { ACCION_PIEZA, FILTROS_VALORACION } from './constants';
 import { fmtFecha, fmtOrden, fmtPlaca } from './format';
+import { getImagenBlob } from '../services/valoracionService';
 
 // ── Estado visual del módulo de valoración (lista, resumen, hoja, vista PDF) ──
 const ESTADO_TAG = {
@@ -204,12 +205,22 @@ export async function generarZipFotos(orden, valoracion) {
   const imagenes = (valoracion && valoracion.imagenes) || [];
   if (!imagenes.length) throw new Error('La valoración no tiene fotografías para descargar.');
   const zip = new JSZip();
-  imagenes.forEach((img, i) => {
-    const { bytes, mime } = decodificarDataUrl(img.url);
+  for (let i = 0; i < imagenes.length; i += 1) {
+    const img = imagenes[i];
+    let bytes;
+    let mime;
+    if (img.id) {
+      // Foto guardada en el backend: se descarga con token y se añade al ZIP.
+      const blob = await getImagenBlob(img.id);
+      bytes = new Uint8Array(await blob.arrayBuffer());
+      mime = blob.type;
+    } else {
+      ({ bytes, mime } = decodificarDataUrl(img.url));
+    }
     const ext = extensionDe(mime, img.nombre);
     const base = (img.nombre || `foto_${i + 1}`).replace(/\.[a-zA-Z0-9]+$/, '');
     zip.file(`${String(i + 1).padStart(2, '0')}_${base}.${ext}`, bytes);
-  });
+  }
   const blob = await zip.generateAsync({ type: 'blob' });
   descargarBlob(blob, `fotos_${orden.placa}.zip`);
 }
