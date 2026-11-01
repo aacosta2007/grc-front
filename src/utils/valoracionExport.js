@@ -52,6 +52,7 @@ export function generarPdfValoracion(orden, valoracion) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const left = 48;
   const right = 564;
+  const colCantidad = 400; // borde derecho de la columna CANT. (la pieza ocupa hasta left + 280)
   let y = 54;
 
   doc.setFont('helvetica', 'bold');
@@ -124,6 +125,7 @@ export function generarPdfValoracion(orden, valoracion) {
   doc.setFontSize(8.5);
   doc.setTextColor(89, 89, 89);
   doc.text('PIEZA', left, y);
+  doc.text('CANT.', colCantidad, y, { align: 'right' });
   doc.text('ACCIÓN · GRAVEDAD', right, y, { align: 'right' });
   y += 6;
   doc.setDrawColor(13, 13, 13);
@@ -147,6 +149,7 @@ export function generarPdfValoracion(orden, valoracion) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(89, 89, 89);
+    doc.text(String(f.cantidad ?? 1), colCantidad, y, { align: 'right' });
     doc.text(detalleTexto(f), right, y, { align: 'right' });
     y += 8;
     doc.setDrawColor(217, 217, 217);

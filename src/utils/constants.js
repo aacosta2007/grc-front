@@ -118,6 +118,14 @@ export const GRAVEDADES = ['LEVE', 'MEDIA', 'GRAVE'];
 // Reparar y pintar se valoran con gravedad; sustituir no.
 export const accionLlevaGravedad = (accion) => accion === ACCION_PIEZA.REPARAR || accion === ACCION_PIEZA.PINTAR;
 
+// Cantidad de una pieza: mismo rango que valida el backend (ValoracionDetalleRequestDto: @Min(1) @Max(999))
+export const CANTIDAD_MAX = 999;
+// Devuelve la cantidad como entero si es válida, o null
+export const cantidadValida = (valor) => {
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= 1 && n <= CANTIDAD_MAX ? n : null;
+};
+
 // Tipos de alerta / listas filtradas desde el Dashboard
 export const TIPOS_AVISO = {
   critico: { id: 'critico', label: 'Críticos', titulo: 'Órdenes críticas', dot: COLORS.red },

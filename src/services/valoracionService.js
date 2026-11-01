@@ -44,6 +44,9 @@ const aBackend = (data) => ({
     pieza: d.pieza,
     accion: ACCION_A_BACK[d.accion],
     gravedad: accionLlevaGravedad(d.accion) ? GRAVEDAD_A_BACK[d.gravedad] : null,
+    // El PUT reemplaza la hoja completa: si no se mandan, la cantidad vuelve a 1 y la observación se pierde
+    cantidad: d.cantidad ?? 1,
+    observacion: d.observacion ?? null,
   })),
 });
 
