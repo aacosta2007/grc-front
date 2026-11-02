@@ -21,10 +21,17 @@ http.interceptors.response.use(
       setSession(null);
       if (!window.location.pathname.startsWith('/login')) window.location.assign('/login');
     }
-    const data = error.response && error.response.data;
-    const msg = (data && (data.message || data.error)) || error.message;
-    return Promise.reject(Object.assign(new Error(msg), { status: error.response && error.response.status }));
+    return Promise.reject(crearErrorApi(error));
   }
 );
+
+// Error del backend: { error, campos? } → Error(msg) con status y, en los 400 de validación,
+// campos ({ "<campo>": "<mensaje>" }, con rutas como "cliente.documento").
+export function crearErrorApi(error) {
+  const data = error.response && error.response.data;
+  const msg = (data && (data.message || data.error)) || error.message;
+  const campos = data && data.campos && typeof data.campos === 'object' ? data.campos : undefined;
+  return Object.assign(new Error(msg), { status: error.response && error.response.status, campos });
+}
 
 export default http;

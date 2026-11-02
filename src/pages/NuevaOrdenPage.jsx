@@ -33,12 +33,15 @@ export default function NuevaOrdenPage() {
   const navigate = useNavigate();
   const [s, setS] = useState(ESTADO_INICIAL);
   const [error, setError] = useState(null);
+  const [camposError, setCamposError] = useState({});
   const [creando, setCreando] = useState(false);
   const [ordenCreada, setOrdenCreada] = useState(null);
   const placaBuscadaRef = useRef('');
   const docBuscadoRef = useRef('');
 
   const set = (patch) => setS((prev) => ({ ...prev, ...patch }));
+  // Mensaje de validación del backend para un campo (claves como "cliente.documento").
+  const errCampo = (k) => camposError[k] || '';
 
   const placaLimpia = s.placa;
   const placaCompleta = placaLimpia.length === 6;
@@ -109,6 +112,7 @@ export default function NuevaOrdenPage() {
 
   const handlePlacaChange = (v) => {
     setError(null);
+    setCamposError({});
     setS({ ...ESTADO_INICIAL, placa: normalizarPlaca(v) });
     placaBuscadaRef.current = '';
     docBuscadoRef.current = '';
@@ -185,6 +189,7 @@ export default function NuevaOrdenPage() {
   const resetTodo = () => {
     setS(ESTADO_INICIAL);
     setError(null);
+    setCamposError({});
     setOrdenCreada(null);
     placaBuscadaRef.current = '';
     docBuscadoRef.current = '';
@@ -193,6 +198,7 @@ export default function NuevaOrdenPage() {
   const crear = async () => {
     if (!listoCrear || creando) return;
     setError(null);
+    setCamposError({});
     setCreando(true);
     try {
       const payload = { placa: placaLimpia };
@@ -221,6 +227,7 @@ export default function NuevaOrdenPage() {
       setOrdenCreada(orden);
     } catch (err) {
       setError(err.message);
+      setCamposError(err.campos || {});
     } finally {
       setCreando(false);
     }
@@ -258,7 +265,7 @@ export default function NuevaOrdenPage() {
         <div className="nueva-orden-titulo">{pasoTitulo}</div>
         <div className="nueva-orden-ayuda">{pasoAyuda}</div>
 
-        <Field label="PLACA DEL VEHÍCULO" htmlFor="nv-placa" style={{ marginTop: 18 }}>
+        <Field label="PLACA DEL VEHÍCULO" htmlFor="nv-placa" hint={errCampo('placa')} style={{ marginTop: 18 }}>
           <input
             id="nv-placa"
             className="nueva-orden-placa-input"
@@ -311,7 +318,12 @@ export default function NuevaOrdenPage() {
         )}
 
         {pideDocumento && (
-          <Field label="DOCUMENTO DE QUIEN TRAE EL VEHÍCULO" htmlFor="nv-doc" style={{ marginTop: 16 }}>
+          <Field
+            label="DOCUMENTO DE QUIEN TRAE EL VEHÍCULO"
+            htmlFor="nv-doc"
+            hint={errCampo('cliente.documento')}
+            style={{ marginTop: 16 }}
+          >
             <input
               id="nv-doc"
               className="nueva-orden-doc-input"
@@ -329,7 +341,7 @@ export default function NuevaOrdenPage() {
           <div className="nueva-orden-bloque">
             <div className="nueva-orden-bloque-titulo grc-mono">DATOS DEL CLIENTE NUEVO</div>
             <div className="nueva-orden-grid">
-              <Field label="NOMBRE COMPLETO" htmlFor="nv-cli-nombre">
+              <Field label="NOMBRE COMPLETO" htmlFor="nv-cli-nombre" hint={errCampo('cliente.nombreCompleto')}>
                 <input
                   id="nv-cli-nombre"
                   value={s.clienteNombre}
@@ -337,7 +349,7 @@ export default function NuevaOrdenPage() {
                   placeholder="Diana Carolina Rojas"
                 />
               </Field>
-              <Field label="CELULAR" htmlFor="nv-cli-celular">
+              <Field label="CELULAR" htmlFor="nv-cli-celular" hint={errCampo('cliente.celular')}>
                 <input
                   id="nv-cli-celular"
                   value={s.clienteCelular}
@@ -348,7 +360,7 @@ export default function NuevaOrdenPage() {
               <Field
                 label="CORREO (OPCIONAL)"
                 htmlFor="nv-cli-correo"
-                hint={!correoValido ? 'Correo con formato inválido.' : ''}
+                hint={!correoValido ? 'Correo con formato inválido.' : errCampo('cliente.correo')}
               >
                 <input
                   id="nv-cli-correo"
@@ -366,7 +378,7 @@ export default function NuevaOrdenPage() {
           <div className="nueva-orden-bloque">
             <div className="nueva-orden-bloque-titulo grc-mono">DATOS DEL VEHÍCULO NUEVO</div>
             <div className="nueva-orden-grid nueva-orden-grid-veh">
-              <Field label="MARCA" htmlFor="nv-veh-marca">
+              <Field label="MARCA" htmlFor="nv-veh-marca" hint={errCampo('vehiculo.marca')}>
                 <input
                   id="nv-veh-marca"
                   value={s.vehMarca}
@@ -374,7 +386,7 @@ export default function NuevaOrdenPage() {
                   placeholder="Chevrolet"
                 />
               </Field>
-              <Field label="MODELO" htmlFor="nv-veh-modelo">
+              <Field label="MODELO" htmlFor="nv-veh-modelo" hint={errCampo('vehiculo.modelo')}>
                 <input
                   id="nv-veh-modelo"
                   value={s.vehModelo}
@@ -385,7 +397,7 @@ export default function NuevaOrdenPage() {
               <Field
                 label="AÑO (OPCIONAL)"
                 htmlFor="nv-veh-anio"
-                hint={!anioValido ? `Debe estar entre ${ANIO_MIN} y ${anioMax()}.` : ''}
+                hint={!anioValido ? `Debe estar entre ${ANIO_MIN} y ${anioMax()}.` : errCampo('vehiculo.anio')}
               >
                 <input
                   id="nv-veh-anio"
@@ -395,7 +407,7 @@ export default function NuevaOrdenPage() {
                   inputMode="numeric"
                 />
               </Field>
-              <Field label="COLOR" htmlFor="nv-veh-color">
+              <Field label="COLOR" htmlFor="nv-veh-color" hint={errCampo('vehiculo.color')}>
                 <input
                   id="nv-veh-color"
                   value={s.vehColor}
@@ -403,7 +415,7 @@ export default function NuevaOrdenPage() {
                   placeholder="Gris acero"
                 />
               </Field>
-              <Field label="VIN (OPCIONAL)" htmlFor="nv-veh-vin">
+              <Field label="VIN (OPCIONAL)" htmlFor="nv-veh-vin" hint={errCampo('vehiculo.vin')}>
                 <input
                   id="nv-veh-vin"
                   value={s.vehVin}
