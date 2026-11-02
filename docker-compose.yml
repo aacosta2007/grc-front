@@ -4,11 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${API_URL:-http://localhost:8080/api}
+        VITE_API_URL: ${API_URL:-/api}
     image: grc-front:latest
     container_name: grc-front
     ports:
       - "${FRONT_PORT:-3000}:8080"
+    networks:
+      - grc
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -30,3 +32,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  grc:
+    external: true
+    name: grc
