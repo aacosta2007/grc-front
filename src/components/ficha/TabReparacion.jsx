@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import * as ordenService from '../../services/ordenService';
 import { Button, ConfirmDialog, Alert, Spinner } from '../ui';
 import { fmtFecha } from '../../utils/format';
-import { ESTADO_ORDEN, ETAPAS_REPARACION, etapaRequiereTecnico } from '../../utils/constants';
+import { ESTADO_ORDEN, ETAPAS_REPARACION, TIPO_OBSERVACION, etapaRequiereTecnico } from '../../utils/constants';
 import StageChangeModal from '../StageChangeModal';
 import EntregaModal from './EntregaModal';
+import ObservacionModal from './ObservacionModal';
 
 const IconCalendario = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -22,6 +23,13 @@ const IconCandado = () => (
   </svg>
 );
 
+const IconFlecha = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M5 12h14" />
+    <path d="m13 6 6 6-6 6" />
+  </svg>
+);
+
 const IconLapiz = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="M12 20h9" />
@@ -35,9 +43,13 @@ export default function TabReparacion({ orden, onOrdenChange }) {
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
   const [errorHistorial, setErrorHistorial] = useState('');
 
-  const [confirmAccion, setConfirmAccion] = useState(null); // 'cotizar' | 'taller' | null
+  const [confirmFecha, setConfirmFecha] = useState(null); // 'cotizar' | 'taller' | null
   const [busyFecha, setBusyFecha] = useState(false);
   const [errorFecha, setErrorFecha] = useState('');
+
+  // Observación desde una tarjeta: { tipo, etapa? } | null
+  const [obsModal, setObsModal] = useState(null);
+  const [avisoObs, setAvisoObs] = useState('');
 
   const [diasEstimados, setDiasEstimados] = useState('');
   const [confirmDias, setConfirmDias] = useState(false);
@@ -64,19 +76,25 @@ export default function TabReparacion({ orden, onOrdenChange }) {
     cargarHistorial();
   }, [cargarHistorial]);
 
+  // El calendario solo marca la fecha (hoy); la observación va con el lápiz
   const confirmarFecha = async () => {
     setBusyFecha(true);
     setErrorFecha('');
     try {
-      const fn = confirmAccion === 'cotizar' ? ordenService.marcarIngresoCotizar : ordenService.marcarIngresoReparacion;
+      const fn = confirmFecha === 'cotizar' ? ordenService.marcarIngresoCotizar : ordenService.marcarIngresoReparacion;
       const actualizado = await fn(orden.id);
       onOrdenChange(actualizado);
-      setConfirmAccion(null);
+      setConfirmFecha(null);
     } catch (e) {
       setErrorFecha(e.message || 'No se pudo registrar la fecha.');
     } finally {
       setBusyFecha(false);
     }
+  };
+
+  const abrirObservacion = (tipo, etapa = null) => {
+    setAvisoObs('');
+    setObsModal({ tipo, etapa });
   };
 
   const nDias = Number(diasEstimados);
@@ -98,18 +116,22 @@ export default function TabReparacion({ orden, onOrdenChange }) {
 
   const entregada = orden.estado === ESTADO_ORDEN.ENTREGADA;
   const puedeCambiarEtapa = !!orden.fechaIngresoReparacion && !entregada;
+  // Las observaciones se admiten en cualquier orden no cancelada (también entregada)
+  const admiteObservaciones = orden.estado !== 'CANCELADA';
 
   const etapasVisitadas = orden.etapasVisitadas || [];
 
   const fechasOrden = [
     {
       key: 'cotizar',
+      tipoObs: TIPO_OBSERVACION.INGRESO_COTIZAR,
       label: 'Ingreso a cotizar',
       nota: 'Fecha de recepción para cotización',
       fecha: orden.fechaIngresoCotizar,
     },
     {
       key: 'taller',
+      tipoObs: TIPO_OBSERVACION.INGRESO_TALLER,
       label: 'Ingreso al taller',
       nota: 'Inicia el conteo de días en taller',
       fecha: orden.fechaIngresoReparacion,
@@ -119,6 +141,7 @@ export default function TabReparacion({ orden, onOrdenChange }) {
   return (
     <div className="ficha-reparacion">
       {errorFecha && <Alert type="error">{errorFecha}</Alert>}
+      {avisoObs && <Alert type="success">{avisoObs}</Alert>}
 
       <div className="ficha-fechas-grid">
         {fechasOrden.map((f) => (
@@ -130,20 +153,33 @@ export default function TabReparacion({ orden, onOrdenChange }) {
               ) : (
                 <span className="ficha-fecha-mono">—</span>
               )}
-              {f.fecha ? (
-                <span className="ficha-fecha-registrada">
-                  <IconCandado /> REGISTRADA
-                </span>
-              ) : (
+              <div className="ficha-card-acciones">
+                {f.fecha ? (
+                  <span className="ficha-fecha-registrada">
+                    <IconCandado /> REGISTRADA
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="ficha-icon-btn"
+                    title="Marcar la fecha (hoy)"
+                    aria-label={`Marcar ${f.label.toLowerCase()} hoy`}
+                    onClick={() => setConfirmFecha(f.key)}
+                  >
+                    <IconCalendario />
+                  </button>
+                )}
                 <button
                   type="button"
                   className="ficha-icon-btn"
-                  aria-label={`Marcar ${f.label.toLowerCase()} hoy`}
-                  onClick={() => setConfirmAccion(f.key)}
+                  title={f.fecha ? 'Agregar observación' : 'Primero marca la fecha'}
+                  aria-label={`Observación de ${f.label.toLowerCase()}`}
+                  disabled={!f.fecha || !admiteObservaciones}
+                  onClick={() => abrirObservacion(f.tipoObs)}
                 >
-                  <IconCalendario />
+                  <IconLapiz />
                 </button>
-              )}
+              </div>
             </div>
             <div className="ficha-fecha-nota">{f.nota}</div>
           </div>
@@ -196,7 +232,9 @@ export default function TabReparacion({ orden, onOrdenChange }) {
 
       <div className="ficha-etapas-encabezado">
         <div className="grc-section-title">Proceso de reparación</div>
-        <div className="grc-sub" style={{ fontSize: 13 }}>El lápiz abre el modal de cambio de etapa</div>
+        <div className="grc-sub" style={{ fontSize: 13 }}>
+          La flecha cambia la orden a esa etapa · el lápiz agrega una observación a una etapa ya visitada
+        </div>
       </div>
 
       {errorHistorial && <Alert type="error">{errorHistorial}</Alert>}
@@ -216,22 +254,37 @@ export default function TabReparacion({ orden, onOrdenChange }) {
               ? histEntry.tecnico.nombre
               : 'Sin asignar';
             const fechaTexto = histEntry ? fmtFecha(histEntry.fechaInicio) : '—';
-            const mostrarEdit = !visitada && puedeCambiarEtapa;
+            const mostrarCambio = !visitada && puedeCambiarEtapa;
+            const puedeObservar = visitada && admiteObservaciones;
 
             return (
               <div key={etapa.id} className="grc-card ficha-etapa-card" style={{ borderLeft: `3px solid ${color}` }}>
                 <div className="ficha-etapa-top">
                   <div className="ficha-etapa-nombre">{etapa.nombre}</div>
-                  {mostrarEdit && (
-                    <button
-                      type="button"
-                      className="ficha-icon-btn"
-                      aria-label={`Cambiar a ${etapa.nombre}`}
-                      onClick={() => setEtapaModal(etapa)}
-                    >
-                      <IconLapiz />
-                    </button>
-                  )}
+                  <div className="ficha-card-acciones">
+                    {mostrarCambio && (
+                      <button
+                        type="button"
+                        className="ficha-icon-btn"
+                        title="Cambiar a esta etapa"
+                        aria-label={`Cambiar a ${etapa.nombre}`}
+                        onClick={() => setEtapaModal(etapa)}
+                      >
+                        <IconFlecha />
+                      </button>
+                    )}
+                    {puedeObservar && (
+                      <button
+                        type="button"
+                        className="ficha-icon-btn"
+                        title="Agregar observación"
+                        aria-label={`Observación de ${etapa.nombre}`}
+                        onClick={() => abrirObservacion(TIPO_OBSERVACION.ETAPA, etapa)}
+                      >
+                        <IconLapiz />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="ficha-etapa-tecnico">{tecnicoTexto}</div>
                 <div className="ficha-etapa-pie">
@@ -248,16 +301,30 @@ export default function TabReparacion({ orden, onOrdenChange }) {
           >
             <div className="ficha-etapa-top">
               <div className="ficha-etapa-nombre">Entregado</div>
-              {puedeCambiarEtapa && (
-                <button
-                  type="button"
-                  className="ficha-icon-btn"
-                  aria-label="Registrar la entrega hoy"
-                  onClick={() => setEntregaModal(true)}
-                >
-                  <IconCalendario />
-                </button>
-              )}
+              <div className="ficha-card-acciones">
+                {puedeCambiarEtapa && (
+                  <button
+                    type="button"
+                    className="ficha-icon-btn"
+                    title="Registrar la entrega (hoy)"
+                    aria-label="Registrar la entrega hoy"
+                    onClick={() => setEntregaModal(true)}
+                  >
+                    <IconCalendario />
+                  </button>
+                )}
+                {entregada && admiteObservaciones && (
+                  <button
+                    type="button"
+                    className="ficha-icon-btn"
+                    title="Agregar observación"
+                    aria-label="Observación de la entrega"
+                    onClick={() => abrirObservacion(TIPO_OBSERVACION.ENTREGA)}
+                  >
+                    <IconLapiz />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="ficha-etapa-tecnico">Fecha de entrega · pasa a Entregado</div>
             <div className="ficha-etapa-pie">
@@ -271,14 +338,28 @@ export default function TabReparacion({ orden, onOrdenChange }) {
       )}
 
       <ConfirmDialog
-        open={!!confirmAccion}
-        title="Registrar fecha"
-        message="Esta fecha se registra una sola vez y no podrá editarse."
+        open={!!confirmFecha}
+        title={confirmFecha === 'cotizar' ? 'Registrar ingreso a cotizar' : 'Registrar ingreso al taller'}
+        message="Se registra con la fecha de hoy, una sola vez, y no podrá editarse. Para dejar una nota usa el lápiz."
         confirmLabel="CONFIRMAR"
         busy={busyFecha}
         onConfirm={confirmarFecha}
-        onCancel={() => (busyFecha ? null : setConfirmAccion(null))}
+        onCancel={() => (busyFecha ? null : setConfirmFecha(null))}
       />
+
+      {obsModal && (
+        <ObservacionModal
+          orden={orden}
+          tipo={obsModal.tipo}
+          etapa={obsModal.etapa}
+          entregada={entregada}
+          onClose={() => setObsModal(null)}
+          onSaved={() => {
+            setObsModal(null);
+            setAvisoObs('Observación guardada. Puedes verla en la pestaña Observaciones.');
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDias}

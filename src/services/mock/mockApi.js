@@ -4,7 +4,7 @@ import { db, persist, nextId, delay } from './db';
 import {
   ETAPA_ENTREGADO_ID, UBICACION, ESTADO_ORDEN, ETAPAS_CARGA,
   DIAS_PROXIMO_A_VENCER, accionLlevaGravedad, FILTROS_VALORACION, ROLES_ASIGNABLES,
-  getEtapa, etapaRequiereTecnico,
+  getEtapa, etapaRequiereTecnico, TIPO_OBSERVACION, TIPO_OBSERVACION_LABEL, MSG_FOTOS_SIN_NOTA,
 } from '../../utils/constants';
 import { diffDias, addDias } from '../../utils/format';
 
@@ -36,6 +36,31 @@ function notificarCliente(orden, mensaje) {
   // Fase asíncrona simulada (@Async en el backend): un fallo no revierte el cambio.
   db.notificaciones.push({ id: nextId(db.notificaciones), idOrden: orden.id, mensaje, estado: 'ENVIADO', fecha: now() });
 }
+
+// Fotos del mock: se guardan como data-URL (persisten en localStorage, a diferencia de un object URL).
+const leerComoDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+
+const imagenesDesdeArchivos = (archivos = [], prefijo = 'obs') =>
+  Promise.all(
+    (archivos || []).map(async (f, i) => ({ id: i + 1, url: await leerComoDataUrl(f), nombre: f.name || `${prefijo}_${i + 1}.jpg` }))
+  );
+
+// Fotos sin nota → 409, como el backend
+const validarNotaFotos = (nota, archivos) => {
+  if ((archivos || []).length && !(nota && nota.trim())) throw new ApiError(MSG_FOTOS_SIN_NOTA, 409);
+};
+
+// Etiqueta de una observación: nombre de la etapa, o la del tipo si no tiene etapa
+const etiquetaObservacion = (o) =>
+  o.tipo && o.tipo !== TIPO_OBSERVACION.ETAPA
+    ? TIPO_OBSERVACION_LABEL[o.tipo]
+    : (getEtapa(o.idEtapa) || {}).nombre || TIPO_OBSERVACION_LABEL.ENTREGA;
 
 // ─────────────────────────── Vista enriquecida de orden ───────────────────────────
 
@@ -97,6 +122,7 @@ function vistaOrden(orden) {
     fechaInicioEtapa,
     diasEnEtapa: fechaInicioEtapa ? diffDias(fechaInicioEtapa) : null,
     diasEnTaller: orden.fechaIngresoReparacion ? diffDias(orden.fechaIngresoReparacion) : null,
+    fechaEntregaReal: orden.fechaEntregaReal || (entregado && ultimoHist ? ultimoHist.fechaInicio : null),
     etapasVisitadas: [...new Set(hist.map((h) => h.idEtapa))],
     asesor: ultimoHist ? nombreUsuario(ultimoHist.idUsuario) : nombreUsuario(orden.idUsuarioCreador),
     creador: nombreUsuario(orden.idUsuarioCreador),
@@ -160,8 +186,9 @@ export async function getHistorialEtapas(idOrden) {
 }
 
 // cambiarEtapa(idEtapa, idUsuario, idTecnico) — transaccional + notificación asíncrona
-export async function cambiarEtapa({ idOrden, idEtapa, idTecnico = null, nota = '', notificar = false }, usuario) {
+export async function cambiarEtapa({ idOrden, idEtapa, idTecnico = null, nota = '', notificar = false, archivos = [] }, usuario) {
   await delay(300);
+  validarNotaFotos(nota, archivos);
   const orden = getOrdenRaw(idOrden);
   const destino = getEtapa(idEtapa);
   if (!destino) throw new ApiError('Etapa destino inválida');
@@ -175,6 +202,8 @@ export async function cambiarEtapa({ idOrden, idEtapa, idTecnico = null, nota = 
   }
 
   const anterior = getEtapa(orden.idEtapaActual);
+  const esEntrega = destino.id === ETAPA_ENTREGADO_ID;
+  const imagenes = await imagenesDesdeArchivos(archivos);
   const ts = now();
   db.historialEtapas
     .filter((h) => h.idOrden === orden.id && h.fechaFin === null)
@@ -188,11 +217,14 @@ export async function cambiarEtapa({ idOrden, idEtapa, idTecnico = null, nota = 
   if (destino.id === ETAPA_ENTREGADO_ID) {
     orden.ubicacionActual = UBICACION.FUERA_DE_TALLER;
     orden.estado = ESTADO_ORDEN.ENTREGADA;
+    orden.fechaEntregaReal = ts;
   }
   if (nota && nota.trim()) {
     db.observaciones.push({
-      id: nextId(db.observaciones), idOrden: orden.id, idEtapa: destino.id, idUsuario: usuario ? usuario.id : null,
-      fecha: ts, texto: nota.trim(), visibleCliente: !!notificar, ubicacion: UBICACION.EN_TALLER, imagenes: [],
+      id: nextId(db.observaciones), idOrden: orden.id, idEtapa: esEntrega ? null : destino.id,
+      tipo: esEntrega ? TIPO_OBSERVACION.ENTREGA : TIPO_OBSERVACION.ETAPA, idUsuario: usuario ? usuario.id : null,
+      fecha: ts, texto: nota.trim(), visibleCliente: !!notificar,
+      ubicacion: esEntrega ? UBICACION.FUERA_DE_TALLER : UBICACION.EN_TALLER, imagenes,
     });
   }
   const tec = tecnicoMin(Number(idTecnico));
@@ -212,22 +244,39 @@ export async function cambiarEtapa({ idOrden, idEtapa, idTecnico = null, nota = 
   return vistaOrden(orden);
 }
 
-export async function marcarIngresoCotizar(idOrden) {
+// Nota opcional (con fotos) → observación sin etapa del tipo indicado
+async function observacionDeIngreso(orden, tipo, { nota, notificar, archivos }, usuario, ts) {
+  if (!(nota && nota.trim())) return;
+  db.observaciones.push({
+    id: nextId(db.observaciones), idOrden: orden.id, idEtapa: null, tipo, idUsuario: usuario ? usuario.id : null,
+    fecha: ts, texto: nota.trim(), visibleCliente: !!notificar, ubicacion: null,
+    imagenes: await imagenesDesdeArchivos(archivos),
+  });
+  if (notificar) setTimeout(() => { notificarCliente(orden, nota.trim()); persist(); }, 0);
+}
+
+export async function marcarIngresoCotizar(idOrden, { nota = '', notificar = false, archivos = [] } = {}, usuario) {
   await delay();
   const orden = getOrdenRaw(idOrden);
-  if (orden.fechaIngresoCotizar) throw new ApiError('La fecha de ingreso a cotizar ya fue marcada');
-  orden.fechaIngresoCotizar = now();
+  if (orden.fechaIngresoCotizar) throw new ApiError('La fecha de ingreso a cotizar ya fue marcada', 409);
+  validarNotaFotos(nota, archivos);
+  const ts = now();
+  orden.fechaIngresoCotizar = ts;
+  await observacionDeIngreso(orden, TIPO_OBSERVACION.INGRESO_COTIZAR, { nota, notificar, archivos }, usuario, ts);
   registrarMovimiento(orden, 'FECHA', 'Fecha de ingreso a cotizar marcada');
   persist();
   return vistaOrden(orden);
 }
 
-export async function marcarIngresoReparacion(idOrden) {
+export async function marcarIngresoReparacion(idOrden, { nota = '', notificar = false, archivos = [] } = {}, usuario) {
   await delay();
   const orden = getOrdenRaw(idOrden);
-  if (orden.fechaIngresoReparacion) throw new ApiError('La fecha de ingreso al taller ya fue marcada');
-  orden.fechaIngresoReparacion = now();
+  if (orden.fechaIngresoReparacion) throw new ApiError('La fecha de ingreso al taller ya fue marcada', 409);
+  validarNotaFotos(nota, archivos);
+  const ts = now();
+  orden.fechaIngresoReparacion = ts;
   orden.ubicacionActual = UBICACION.EN_TALLER;
+  await observacionDeIngreso(orden, TIPO_OBSERVACION.INGRESO_TALLER, { nota, notificar, archivos }, usuario, ts);
   registrarMovimiento(orden, 'FECHA', 'Ingreso al taller registrado · queda en Asignado');
   persist();
   return vistaOrden(orden);
@@ -352,27 +401,47 @@ export async function getObservaciones(idOrden) {
   return db.observaciones
     .filter((o) => o.idOrden === Number(idOrden))
     .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-    .map((o) => ({ ...clone(o), autor: nombreUsuario(o.idUsuario), etapa: getEtapa(o.idEtapa).nombre }));
+    .map((o) => ({
+      ...clone(o),
+      tipo: o.tipo || TIPO_OBSERVACION.ETAPA,
+      autor: nombreUsuario(o.idUsuario),
+      etapa: etiquetaObservacion(o),
+    }));
 }
 
-// imagenes: [{ url (dataURL), nombre }]
-export async function crearObservacion({ idOrden, idEtapa, texto, imagenes = [], notificar = false }, usuario) {
+// { idOrden, tipo, idEtapa (solo ETAPA), texto, notificar, archivos:[File] } · todo o nada, como el backend
+export async function crearObservacion(
+  { idOrden, tipo = TIPO_OBSERVACION.ETAPA, idEtapa, texto, notificar = false, archivos = [] },
+  usuario
+) {
   await delay(300);
   const orden = getOrdenRaw(idOrden);
-  const visitadas = db.historialEtapas.filter((h) => h.idOrden === orden.id).map((h) => h.idEtapa);
-  if (!visitadas.includes(Number(idEtapa))) throw new ApiError('Solo se puede registrar en etapas ya visitadas');
   if (!texto || !texto.trim()) throw new ApiError('Escribe la nota de la observación');
+  validarNotaFotos(texto, archivos);
+  const entregada = orden.estado === ESTADO_ORDEN.ENTREGADA;
+  if (tipo === TIPO_OBSERVACION.ETAPA) {
+    const visitadas = db.historialEtapas.filter((h) => h.idOrden === orden.id).map((h) => h.idEtapa);
+    if (!visitadas.includes(Number(idEtapa))) throw new ApiError('Solo se puede registrar en etapas ya visitadas', 409);
+  } else if (tipo === TIPO_OBSERVACION.INGRESO_COTIZAR && !orden.fechaIngresoCotizar) {
+    throw new ApiError('La orden aún no tiene ingreso a cotizar', 409);
+  } else if (tipo === TIPO_OBSERVACION.INGRESO_TALLER && !orden.fechaIngresoReparacion) {
+    throw new ApiError('La orden aún no tiene ingreso al taller', 409);
+  } else if (tipo === TIPO_OBSERVACION.ENTREGA && !entregada) {
+    throw new ApiError('La orden aún no ha sido entregada', 409);
+  }
+  const conUbicacion = tipo === TIPO_OBSERVACION.ETAPA && !entregada;
   const obs = {
-    id: nextId(db.observaciones), idOrden: orden.id, idEtapa: Number(idEtapa), idUsuario: usuario ? usuario.id : null,
-    fecha: now(), texto: texto.trim(), visibleCliente: !!notificar, ubicacion: UBICACION.EN_TALLER,
-    imagenes: imagenes.map((img, i) => ({ id: i + 1, url: img.url, nombre: img.nombre || `obs_${orden.id}_${i + 1}.jpg` })),
+    id: nextId(db.observaciones), idOrden: orden.id, idEtapa: tipo === TIPO_OBSERVACION.ETAPA ? Number(idEtapa) : null, tipo,
+    idUsuario: usuario ? usuario.id : null, fecha: now(), texto: texto.trim(), visibleCliente: !!notificar,
+    ubicacion: conUbicacion ? UBICACION.EN_TALLER : null,
+    imagenes: await imagenesDesdeArchivos(archivos, `obs_${orden.id}`),
   };
   db.observaciones.push(obs);
-  orden.ubicacionActual = UBICACION.EN_TALLER;
-  registrarMovimiento(orden, 'OBSERVACION', `Observación en ${getEtapa(obs.idEtapa).nombre}: ${obs.texto.slice(0, 60)}`);
+  if (conUbicacion) orden.ubicacionActual = UBICACION.EN_TALLER;
+  registrarMovimiento(orden, 'OBSERVACION', `Observación en ${etiquetaObservacion(obs)}: ${obs.texto.slice(0, 60)}`);
   persist();
   if (notificar) setTimeout(() => { notificarCliente(orden, obs.texto); persist(); }, 0);
-  return { ...clone(obs), autor: nombreUsuario(obs.idUsuario), etapa: getEtapa(obs.idEtapa).nombre };
+  return { ...clone(obs), autor: nombreUsuario(obs.idUsuario), etapa: etiquetaObservacion(obs) };
 }
 
 // Vista consolidada de solo lectura: fotos de valoración + observaciones
@@ -384,7 +453,7 @@ export async function getFotosOrden(idOrden) {
   if (val) val.imagenes.forEach((img) => fotos.push({ id: `val-${img.id}`, url: img.url, nombre: img.nombre, origen: 'Valoración', fecha: val.actualizadaAt }));
   db.observaciones
     .filter((o) => o.idOrden === id)
-    .forEach((o) => o.imagenes.forEach((img) => fotos.push({ id: `obs-${o.id}-${img.id}`, url: img.url, nombre: img.nombre, origen: getEtapa(o.idEtapa).nombre, fecha: o.fecha })));
+    .forEach((o) => o.imagenes.forEach((img) => fotos.push({ id: `obs-${o.id}-${img.id}`, url: img.url, nombre: img.nombre, origen: etiquetaObservacion(o), fecha: o.fecha })));
   return fotos;
 }
 

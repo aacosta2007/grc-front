@@ -149,6 +149,9 @@
   flex: none;
 }
 .ficha-icon-btn:hover { border-color: var(--sub); color: var(--text); }
+.ficha-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ficha-icon-btn:disabled:hover { border-color: var(--line); color: var(--sub); }
+.ficha-card-acciones { display: flex; align-items: center; gap: 6px; }
 
 .ficha-etapas-encabezado { display: flex; align-items: baseline; gap: 12px; margin: 26px 0 13px; flex-wrap: wrap; }
 .ficha-etapas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 12px; }
@@ -203,44 +206,6 @@
 
 .ficha-obs-form { padding: 16px; display: flex; flex-direction: column; }
 .ficha-obs-form-header { margin-bottom: 4px; }
-.ficha-file-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 1px dashed var(--line);
-  color: var(--sub);
-  padding: 11px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  margin-top: 13px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.ficha-file-btn:hover { border-color: var(--sub); color: var(--text); }
-
-.ficha-preview-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.ficha-preview-item { position: relative; width: 56px; height: 56px; }
-.ficha-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
-.ficha-preview-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--red);
-  color: var(--text);
-  border: none;
-  font-size: 13px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
 .ficha-checkbox {
   display: flex;
   align-items: center;
