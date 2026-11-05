@@ -1,6 +1,7 @@
 import http, { USE_MOCK } from './httpClient';
 import * as mock from './mock/mockApi';
 import { getSessionUser } from './session';
+import { aFormData } from './multipart';
 import { COLUMNA_ASIGNADO, ESTADO_ORDEN, ETAPA_ENTREGADO_ID, getEtapa } from '../utils/constants';
 
 // Todas las funciones de órdenes devuelven la "vista de orden" enriquecida
@@ -111,32 +112,65 @@ export const getHistorialEtapas = async (idOrden) => {
 const patchYRecargar = async (idOrden, ruta, body) =>
   ordenDesdeBackend(await http.patch(`/orden/${idOrden}/${ruta}`, body));
 
-// { idOrden, idEtapa, idTecnico (null solo en etapas sin técnico), nota, notificar }
+// Igual, pero en multipart (datos + fotos): la nota y las fotos se guardan con la acción, todo o nada.
+const patchMultipartYRecargar = (idOrden, ruta, datos, archivos) =>
+  patchYRecargar(idOrden, ruta, aFormData(datos, archivos));
+
+// Nota opcional de las fechas de ingreso: vacía viaja como null (no crea observación).
+const notaONull = (nota) => (nota && nota.trim() ? nota.trim() : null);
+
+// { idOrden, idEtapa, idTecnico (null solo en etapas sin técnico), nota, notificar, archivos:[File] }
 export const cambiarEtapa = (data) =>
   USE_MOCK
     ? mock.cambiarEtapa(data, getSessionUser())
-    : patchYRecargar(data.idOrden, 'etapa', {
-        idEtapaDestino: data.idEtapa,
-        idTecnico: data.idTecnico,
-        nota: data.nota,
-        visibleCliente: data.notificar,
-      });
+    : patchMultipartYRecargar(
+        data.idOrden,
+        'etapa',
+        {
+          idEtapaDestino: data.idEtapa,
+          idTecnico: data.idTecnico,
+          nota: data.nota,
+          visibleCliente: data.notificar,
+        },
+        data.archivos
+      );
 
-export const marcarIngresoCotizar = (idOrden) =>
-  USE_MOCK ? mock.marcarIngresoCotizar(idOrden) : patchYRecargar(idOrden, 'ingreso-cotizar', { fecha: hoyLocal() });
+// { nota, notificar, archivos } opcionales: si hay nota se crea la observación "Ingreso a cotizar".
+export const marcarIngresoCotizar = (idOrden, { nota, notificar = false, archivos = [] } = {}) =>
+  USE_MOCK
+    ? mock.marcarIngresoCotizar(idOrden, { nota, notificar, archivos }, getSessionUser())
+    : patchMultipartYRecargar(
+        idOrden,
+        'ingreso-cotizar',
+        { fecha: hoyLocal(), nota: notaONull(nota), visibleCliente: !!notificar },
+        archivos
+      );
 
-export const marcarIngresoReparacion = (idOrden) =>
-  USE_MOCK ? mock.marcarIngresoReparacion(idOrden) : patchYRecargar(idOrden, 'ingreso-reparacion', { fecha: hoyLocal() });
+// Igual que marcarIngresoCotizar; la observación queda como "Ingreso al taller".
+export const marcarIngresoReparacion = (idOrden, { nota, notificar = false, archivos = [] } = {}) =>
+  USE_MOCK
+    ? mock.marcarIngresoReparacion(idOrden, { nota, notificar, archivos }, getSessionUser())
+    : patchMultipartYRecargar(
+        idOrden,
+        'ingreso-reparacion',
+        { fecha: hoyLocal(), nota: notaONull(nota), visibleCliente: !!notificar },
+        archivos
+      );
 
 export const marcarDiasEstimados = (idOrden, dias) =>
   USE_MOCK ? mock.marcarDiasEstimados(idOrden, dias) : patchYRecargar(idOrden, 'dias-estimados', { dias });
 
-// { idOrden, nota, notificar } · marca la fecha de entrega real y la deja fuera del taller.
+// { idOrden, nota, notificar, archivos } · marca la fecha de entrega real y la deja fuera del taller.
 // La orden sigue ACTIVA (pasa a la columna "Entregado"). La nota, si viene, queda como observación de "Entrega".
 export const entregarOrden = (data) =>
   USE_MOCK
     ? mock.cambiarEtapa({ ...data, idEtapa: ETAPA_ENTREGADO_ID, idTecnico: null }, getSessionUser())
-    : patchYRecargar(data.idOrden, 'entregar-orden', { nota: data.nota, visibleCliente: data.notificar });
+    : patchMultipartYRecargar(
+        data.idOrden,
+        'entregar-orden',
+        { nota: data.nota, visibleCliente: data.notificar },
+        data.archivos
+      );
 
 // ── Nueva orden ──
 

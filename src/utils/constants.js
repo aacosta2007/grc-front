@@ -142,3 +142,25 @@ export const FILTROS_VALORACION = {
   SIN_CARGAR: 'Sin cargar a CESVI',
   CARGADAS: 'Cargadas a CESVI',
 };
+
+// Tipo de una observación (ObservacionRequestDto.tipo). Solo ETAPA lleva idEtapa.
+export const TIPO_OBSERVACION = {
+  ETAPA: 'ETAPA',
+  INGRESO_COTIZAR: 'INGRESO_COTIZAR',
+  INGRESO_TALLER: 'INGRESO_TALLER',
+  ENTREGA: 'ENTREGA',
+};
+
+// Etiqueta de las observaciones sin etapa (las de ETAPA usan el nombre de la etapa)
+export const TIPO_OBSERVACION_LABEL = {
+  INGRESO_COTIZAR: 'Ingreso a cotizar',
+  INGRESO_TALLER: 'Ingreso al taller',
+  ENTREGA: 'Entrega',
+};
+
+// Límites de notas y fotos (mismos que valida el backend)
+export const NOTA_MAX = 500;
+export const FOTO_TIPOS = ['image/jpeg', 'image/png'];
+export const FOTO_MAX_BYTES = 10 * 1024 * 1024; // 10 MB por foto
+export const FOTOS_MAX_TOTAL_BYTES = 60 * 1024 * 1024; // 60 MB por envío
+export const MSG_FOTOS_SIN_NOTA = 'Para adjuntar fotos escribe una nota.';

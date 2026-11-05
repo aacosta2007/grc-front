@@ -52,6 +52,18 @@ const hist = (idEtapa, fechaInicio, { fechaFin = null, tecnico = null } = {}) =>
 
 const PEDRO = { id: 14, nombre: 'Pedro Pablo Arango' };
 
+// Parte "datos" (JSON) y nombres de la parte "archivos" de un PATCH multipart
+const llamadaMultipart = async (n = 0) => {
+  const [url, form] = http.patch.mock.calls[n];
+  expect(form).toBeInstanceOf(FormData);
+  return {
+    url,
+    datos: JSON.parse(await form.get('datos').text()),
+    archivos: form.getAll('archivos').map((f) => f.name),
+  };
+};
+const foto = (nombre) => new File(['x'], nombre, { type: 'image/jpeg' });
+
 // Responde GET según la ruta: { '/orden/17': dto, '/orden/17/etapas': [...] }
 const rutasGet = (rutas) =>
   http.get.mockImplementation((url) =>
@@ -154,32 +166,57 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
     http.patch.mockResolvedValue(ordenDto({ idEtapaActual: 6, etapasVisitadas: [1, 6] }));
   });
 
-  it('cambiarEtapa manda el body que espera CambioEtapaRequestDto', async () => {
-    const o = await ordenService.cambiarEtapa({ idOrden: 17, idEtapa: 6, idTecnico: 20, nota: 'Listo', notificar: true });
-
-    expect(http.patch).toHaveBeenCalledWith('/orden/17/etapa', {
-      idEtapaDestino: 6,
+  it('cambiarEtapa manda CambioEtapaRequestDto y las fotos en multipart', async () => {
+    const o = await ordenService.cambiarEtapa({
+      idOrden: 17,
+      idEtapa: 6,
       idTecnico: 20,
       nota: 'Listo',
-      visibleCliente: true,
+      notificar: true,
+      archivos: [foto('a.jpg'), foto('b.jpg')],
+    });
+
+    expect(await llamadaMultipart()).toEqual({
+      url: '/orden/17/etapa',
+      datos: { idEtapaDestino: 6, idTecnico: 20, nota: 'Listo', visibleCliente: true },
+      archivos: ['a.jpg', 'b.jpg'],
     });
     expect(o.etapasVisitadas).toEqual([1, 6]);
     expect(http.get).not.toHaveBeenCalled(); // ya no recarga la orden
   });
 
-  it('marcarIngresoCotizar manda la fecha local de hoy', async () => {
+  it('marcarIngresoCotizar sin nota manda la fecha local de hoy y nota null', async () => {
     const o = await ordenService.marcarIngresoCotizar(17);
 
-    expect(http.patch).toHaveBeenCalledWith('/orden/17/ingreso-cotizar', { fecha: '2026-10-31' });
+    expect(await llamadaMultipart()).toEqual({
+      url: '/orden/17/ingreso-cotizar',
+      datos: { fecha: '2026-10-31', nota: null, visibleCliente: false },
+      archivos: [],
+    });
     expect(o.etapasVisitadas).toEqual([1, 6]);
+  });
+
+  it('marcarIngresoCotizar con nota, notificar y fotos los manda en la misma petición', async () => {
+    await ordenService.marcarIngresoCotizar(17, { nota: '  Llega con golpe  ', notificar: true, archivos: [foto('c.jpg')] });
+
+    expect(http.patch).toHaveBeenCalledTimes(1);
+    expect(await llamadaMultipart()).toEqual({
+      url: '/orden/17/ingreso-cotizar',
+      datos: { fecha: '2026-10-31', nota: 'Llega con golpe', visibleCliente: true },
+      archivos: ['c.jpg'],
+    });
   });
 
   it('marcarIngresoReparacion usa la fecha local aunque en UTC ya sea mañana', async () => {
     vi.setSystemTime(new Date(2026, 9, 31, 23, 30, 0)); // 11:30 p. m. local
 
-    await ordenService.marcarIngresoReparacion(17);
+    await ordenService.marcarIngresoReparacion(17, { nota: 'Ingresa', archivos: [foto('d.jpg')] });
 
-    expect(http.patch).toHaveBeenCalledWith('/orden/17/ingreso-reparacion', { fecha: '2026-10-31' });
+    expect(await llamadaMultipart()).toEqual({
+      url: '/orden/17/ingreso-reparacion',
+      datos: { fecha: '2026-10-31', nota: 'Ingresa', visibleCliente: false },
+      archivos: ['d.jpg'],
+    });
   });
 
   it('marcarDiasEstimados manda { dias } y conserva etapasVisitadas', async () => {
@@ -190,7 +227,7 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
     expect(o.etapasVisitadas).toEqual([1, 6]);
   });
 
-  it('entregarOrden manda el body que espera EntregaRequestDto', async () => {
+  it('entregarOrden manda EntregaRequestDto y las fotos en multipart', async () => {
     http.patch.mockResolvedValue(
       ordenDto({
         idEtapaActual: 9,
@@ -201,9 +238,18 @@ describe('acciones de la ficha (devuelven la orden completa)', () => {
       })
     );
 
-    const o = await ordenService.entregarOrden({ idOrden: 17, nota: 'Entregado sin novedad', notificar: false });
+    const o = await ordenService.entregarOrden({
+      idOrden: 17,
+      nota: 'Entregado sin novedad',
+      notificar: false,
+      archivos: [foto('e.jpg')],
+    });
 
-    expect(http.patch).toHaveBeenCalledWith('/orden/17/entregar-orden', { nota: 'Entregado sin novedad', visibleCliente: false });
+    expect(await llamadaMultipart()).toEqual({
+      url: '/orden/17/entregar-orden',
+      datos: { nota: 'Entregado sin novedad', visibleCliente: false },
+      archivos: ['e.jpg'],
+    });
     expect(o).toMatchObject({ estado: 'ENTREGADA', fechaEntregaReal: '2026-10-31', ubicacionActual: 'FUERA_DE_TALLER' });
     expect(o.etapasVisitadas).toEqual([1, 9]);
   });

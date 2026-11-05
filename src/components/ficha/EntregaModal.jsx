@@ -1,21 +1,33 @@
 import React, { useState } from 'react';
 import { Modal, Field, Alert, Button } from '../ui';
 import * as ordenService from '../../services/ordenService';
+import AdjuntarFotos from '../AdjuntarFotos';
+import useFotosAdjuntas from '../../hooks/useFotosAdjuntas';
+import { NOTA_MAX } from '../../utils/constants';
 import '../../styles/StageChangeModal.css';
 
 // Entrega del vehículo: registra la fecha de entrega real (una sola vez). La orden sigue activa
 // (columna "Entregado") pero ya no admite cambios de etapa ni de fechas.
 export default function EntregaModal({ orden, onClose, onSaved }) {
   const [nota, setNota] = useState('');
+  const adjuntos = useFotosAdjuntas();
   const [notificar, setNotificar] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
+  const fotosSinNota = adjuntos.fotos.length > 0 && !nota.trim();
+
   const guardar = async () => {
+    if (guardando || fotosSinNota) return;
     setGuardando(true);
     setError('');
     try {
-      const res = await ordenService.entregarOrden({ idOrden: orden.id, nota: nota.trim(), notificar });
+      const res = await ordenService.entregarOrden({
+        idOrden: orden.id,
+        nota: nota.trim(),
+        notificar,
+        archivos: adjuntos.archivos,
+      });
       onSaved(res);
     } catch (e) {
       setError(e.message || 'No se pudo registrar la entrega');
@@ -37,12 +49,14 @@ export default function EntregaModal({ orden, onClose, onSaved }) {
           <textarea
             id="entrega-nota"
             rows={3}
-            maxLength={500}
+            maxLength={NOTA_MAX}
             placeholder="Novedad de la entrega"
             value={nota}
             onChange={(e) => setNota(e.target.value)}
           />
         </Field>
+
+        <AdjuntarFotos adjuntos={adjuntos} disabled={guardando} sinNota={!nota.trim()} />
 
         <label className="stagechange-check" htmlFor="entrega-notificar">
           <input
@@ -63,7 +77,7 @@ export default function EntregaModal({ orden, onClose, onSaved }) {
           <Button variant="outline" onClick={onClose} disabled={guardando}>
             CANCELAR
           </Button>
-          <Button variant="primary" onClick={guardar} disabled={guardando}>
+          <Button variant="primary" onClick={guardar} disabled={guardando || fotosSinNota}>
             {guardando ? 'GUARDANDO…' : 'ENTREGAR VEHÍCULO'}
           </Button>
         </div>

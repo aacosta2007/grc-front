@@ -1,0 +1,59 @@
+/* Selector de fotos compartido (observaciones, cambio de etapa, entrega, ingresos). Prefijo: adjfotos- */
+
+.adjfotos { display: flex; flex-direction: column; }
+
+.adjfotos-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--sub);
+  padding: 11px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  margin-top: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.adjfotos-btn:hover { border-color: var(--sub); color: var(--text); }
+.adjfotos-btn.is-disabled { opacity: 0.5; cursor: not-allowed; }
+.adjfotos-btn.is-disabled:hover { border-color: var(--line); color: var(--sub); }
+
+.adjfotos-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.adjfotos-item { position: relative; width: 56px; height: 56px; }
+.adjfotos-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.adjfotos-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--text);
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+.adjfotos-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.adjfotos-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.adjfotos-aviso {
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 8px;
+  line-height: 1.4;
+}

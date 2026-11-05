@@ -35,7 +35,8 @@ function FotoImagen({ foto, className, alt, fallback = null }) {
   return <img src={src} alt={alt} className={className} />;
 }
 
-// HU-26 · Galería consolidada de solo lectura (valoración + observaciones por etapa).
+// HU-26 · Galería consolidada de solo lectura (valoración + observaciones). El backend manda el origen ya
+// etiquetado: "Valoración", el nombre de la etapa, "Ingreso a cotizar", "Ingreso al taller" o "Entrega".
 export default function TabFotografias({ orden }) {
   const [fotos, setFotos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -77,7 +78,6 @@ export default function TabFotografias({ orden }) {
       </div>
       <div className="ficha-fotos-grid">
         {fotos.map((f, idx) => {
-          const esValoracion = f.origen === 'Valoración';
           return (
             <button key={`${f.tipo || 'mock'}-${f.id}`} type="button" className="ficha-foto-item" onClick={() => setVisorIdx(idx)}>
               <span className="ficha-foto-thumb" aria-hidden="true">
@@ -88,9 +88,7 @@ export default function TabFotografias({ orden }) {
                 <span className="grc-mono">{fmtFecha(f.fecha)}</span>
                 <span className="ficha-foto-autor">{f.autor}</span>
                 <span className="grc-mono ficha-foto-rol">{f.rol}</span>
-                <span className="ficha-foto-origen">
-                  {esValoracion ? 'Valoración' : f.origen}
-                </span>
+                <span className="ficha-foto-origen">{f.origen}</span>
               </span>
             </button>
           );

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Field, Alert, Button } from './ui';
+import AdjuntarFotos from './AdjuntarFotos';
+import useFotosAdjuntas from '../hooks/useFotosAdjuntas';
 import * as ordenService from '../services/ordenService';
 import * as tecnicoService from '../services/tecnicoService';
-import { etapaRequiereTecnico, ETAPA_BANCADA_ID } from '../utils/constants';
+import { etapaRequiereTecnico, ETAPA_BANCADA_ID, NOTA_MAX } from '../utils/constants';
 import '../styles/StageChangeModal.css';
 
 // Modal compartido de cambio de etapa (Backlog y Ficha lo montan condicionalmente).
@@ -14,6 +16,7 @@ export default function StageChangeModal({ orden, etapaDestino, onClose, onSaved
   const [cargandoTecnicos, setCargandoTecnicos] = useState(requiereTecnico);
   const [idTecnico, setIdTecnico] = useState('');
   const [nota, setNota] = useState('');
+  const adjuntos = useFotosAdjuntas();
   const [notificar, setNotificar] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +41,8 @@ export default function StageChangeModal({ orden, etapaDestino, onClose, onSaved
     };
   }, [requiereTecnico, etapaDestino.especialidad]);
 
-  const puedeGuardar = !guardando && (!requiereTecnico || !!idTecnico);
+  const fotosSinNota = adjuntos.fotos.length > 0 && !nota.trim();
+  const puedeGuardar = !guardando && (!requiereTecnico || !!idTecnico) && !fotosSinNota;
 
   const guardar = async () => {
     if (!puedeGuardar) return;
@@ -51,6 +55,7 @@ export default function StageChangeModal({ orden, etapaDestino, onClose, onSaved
         idTecnico: requiereTecnico ? Number(idTecnico) : null,
         nota: nota.trim(),
         notificar,
+        archivos: adjuntos.archivos,
       });
       onSaved(res);
     } catch (e) {
@@ -100,11 +105,14 @@ export default function StageChangeModal({ orden, etapaDestino, onClose, onSaved
           <textarea
             id="stagechange-nota"
             rows={3}
+            maxLength={NOTA_MAX}
             placeholder="Novedad del cambio de etapa"
             value={nota}
             onChange={(e) => setNota(e.target.value)}
           />
         </Field>
+
+        <AdjuntarFotos adjuntos={adjuntos} disabled={guardando} sinNota={!nota.trim()} />
 
         <label className="stagechange-check" htmlFor="stagechange-notificar">
           <input
